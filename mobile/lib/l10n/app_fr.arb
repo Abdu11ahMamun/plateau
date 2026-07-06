@@ -1,0 +1,15 @@
+{
+  "@@locale": "fr",
+  "loginTitle": "Plateau",
+  "loginHint": "Entrez votre email",
+  "loginButton": "Envoyer le code",
+  "otpTitle": "Code envoyé à",
+  "otpButton": "Se connecter",
+  "homeGreeting": "Bonjour, {name}",
+  "homeReady": "Prêt à pointer",
+  "homeSubtitle": "Approchez votre badge NFC",
+  "homeManual": "Pointer manuellement",
+  "navHome": "Accueil",
+  "navHours": "Mes heures",
+  "navProfile": "Profil"
+}

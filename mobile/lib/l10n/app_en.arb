@@ -1,0 +1,32 @@
+{
+  "@@locale": "en",
+  "loginTitle": "Plateau",
+  "@loginTitle": {
+    "description": "App name shown on the login and OTP screens."
+  },
+  "loginHint": "Enter your email",
+  "@loginHint": {
+    "description": "Heading above the email field on the login screen."
+  },
+  "loginButton": "Send code",
+  "otpTitle": "Code sent to",
+  "@otpTitle": {
+    "description": "Prefix shown before the email address on the OTP screen."
+  },
+  "otpButton": "Sign in",
+  "homeGreeting": "Hello, {name}",
+  "@homeGreeting": {
+    "description": "Home header greeting.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeReady": "Ready to clock in",
+  "homeSubtitle": "Tap your NFC badge",
+  "homeManual": "Clock in manually",
+  "navHome": "Home",
+  "navHours": "My hours",
+  "navProfile": "Profile"
+}
