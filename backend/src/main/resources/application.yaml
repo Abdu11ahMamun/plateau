@@ -1,3 +1,16 @@
 spring:
   application:
-    name: backend
+    name: plateau-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/plateau_dev
+    username: root
+    password: 2360mamun
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+server:
+  port: 8080
