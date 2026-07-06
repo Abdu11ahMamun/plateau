@@ -1,0 +1,22 @@
+CREATE TABLE otp_codes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    identifier VARCHAR(255) NOT NULL,
+    code_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    attempts TINYINT NOT NULL DEFAULT 0,
+    locked_until TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE refresh_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rt_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL;
+ALTER TABLE users ADD UNIQUE KEY uq_tenant_email (tenant_id, email);

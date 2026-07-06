@@ -12,5 +12,19 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:dev@plateau.fr}
+    password: ${MAIL_PASSWORD:dev}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 server:
   port: 8080
+plateau:
+  jwt:
+    secret: dev-secret-key-minimum-32-characters!!
+    expiry-minutes: 15
+  otp:
+    expiry-minutes: 10
