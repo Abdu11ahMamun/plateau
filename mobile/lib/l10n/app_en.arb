@@ -26,6 +26,35 @@
   "homeReady": "Ready to clock in",
   "homeSubtitle": "Tap your NFC badge",
   "homeManual": "Clock in manually",
+  "homeClockedIn": "Clocked in",
+  "homeClockedInSince": "since {time}",
+  "@homeClockedInSince": {
+    "description": "Shown under the running session timer on the home screen.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "punchInGreeting": "Hello, {name}!",
+  "@punchInGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "punchInRecorded": "Entry recorded",
+  "punchOutGreeting": "See you soon, {name}!",
+  "@punchOutGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "punchOutRecorded": "Exit recorded",
+  "nfcError": "Badge not recognized",
   "navHome": "Home",
   "navHours": "My hours",
   "navProfile": "Profile"

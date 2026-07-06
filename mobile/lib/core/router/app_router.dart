@@ -6,6 +6,8 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/punch/data/punch_repository.dart';
+import '../../features/punch/screens/punch_result_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 
 /// Bridges Riverpod auth changes to go_router so [GoRouter.refreshListenable]
@@ -43,6 +45,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/otp', builder: (_, _) => const OtpScreen()),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+      GoRoute(
+        path: '/punch-result',
+        // Only reachable with a PunchResult in hand (set by the punch flow);
+        // a bare navigation falls back to home.
+        redirect: (_, state) => state.extra is PunchResult ? null : '/home',
+        builder: (_, state) =>
+            PunchResultScreen(result: state.extra! as PunchResult),
+      ),
     ],
   );
 });

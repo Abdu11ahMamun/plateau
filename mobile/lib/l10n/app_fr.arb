@@ -9,6 +9,13 @@
   "homeReady": "Prêt à pointer",
   "homeSubtitle": "Approchez votre badge NFC",
   "homeManual": "Pointer manuellement",
+  "homeClockedIn": "En service",
+  "homeClockedInSince": "depuis {time}",
+  "punchInGreeting": "Bonjour, {name} !",
+  "punchInRecorded": "Entrée enregistrée",
+  "punchOutGreeting": "À bientôt, {name} !",
+  "punchOutRecorded": "Sortie enregistrée",
+  "nfcError": "Badge non reconnu",
   "navHome": "Accueil",
   "navHours": "Mes heures",
   "navProfile": "Profil"

@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Required for API calls to the Plateau backend. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Badge punches. Not required so the app still installs on devices
+         without NFC (manual punch is the fallback). -->
+    <uses-permission android:name="android.permission.NFC"/>
+    <uses-feature android:name="android.hardware.nfc" android:required="false"/>
     <application
         android:label="Plateau"
         android:name="${applicationName}"
