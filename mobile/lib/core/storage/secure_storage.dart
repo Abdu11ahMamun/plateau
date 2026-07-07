@@ -14,6 +14,7 @@ class SecureStorage {
   static const _kInstallId = 'device_install_id';
   static const _kUserName = 'user_name';
   static const _kUserEmail = 'user_email';
+  static const _kLocale = 'app_locale';
 
   Future<String?> readToken() => _storage.read(key: _kToken);
   Future<void> writeToken(String value) =>
@@ -34,6 +35,11 @@ class SecureStorage {
   Future<String?> readUserEmail() => _storage.read(key: _kUserEmail);
   Future<void> writeUserEmail(String value) =>
       _storage.write(key: _kUserEmail, value: value);
+
+  /// Device-level display language ('en'/'fr'). Not cleared on sign-out.
+  Future<String?> readLocale() => _storage.read(key: _kLocale);
+  Future<void> writeLocale(String value) =>
+      _storage.write(key: _kLocale, value: value);
 
   Future<void> clearSession() async {
     await _storage.delete(key: _kToken);

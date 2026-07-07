@@ -77,14 +77,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_punching) return;
     setState(() => _punching = true);
     try {
-      final outcome =
-          await ref.read(punchControllerProvider.notifier).punch('NFC');
+      final outcome = await ref
+          .read(punchControllerProvider.notifier)
+          .punch('NFC');
       if (!mounted) return;
       if (outcome.queued) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.offlineQueued),
-          ),
+          SnackBar(content: Text(AppLocalizations.of(context)!.offlineQueued)),
         );
       } else {
         context.go('/punch-result', extra: outcome.result);
@@ -107,13 +106,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final name = ref.watch(authControllerProvider).userName ?? '';
     final firstName = name.isEmpty ? '' : name.split(' ').first;
     final now = TimeOfDay.now();
-    final time = DateFormat('HH:mm').format(
-      DateTime(2000, 1, 1, now.hour, now.minute),
-    );
+    final time = DateFormat(
+      'HH:mm',
+    ).format(DateTime(2000, 1, 1, now.hour, now.minute));
     final l10n = AppLocalizations.of(context)!;
 
     final lastPunch = ref.watch(punchControllerProvider).value;
-    final clockedInAt = (lastPunch?.isIn ?? false) ? lastPunch!.eventTime : null;
+    final clockedInAt = (lastPunch?.isIn ?? false)
+        ? lastPunch!.eventTime
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -294,26 +295,22 @@ class _ReadyCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: AppColors.sage,
               ),
-              child: const Icon(
-                Icons.schedule,
-                color: Colors.white,
-                size: 48,
-              ),
+              child: const Icon(Icons.schedule, color: Colors.white, size: 48),
             ),
           ),
           const SizedBox(height: 24),
           Text(
             readyText,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
             subtitleText,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -364,61 +361,76 @@ class _ClockedInCardState extends State<_ClockedInCard> {
 
   @override
   Widget build(BuildContext context) {
+    // The sage accent is a clipped strip rather than a border side: a
+    // non-uniform border color + borderRadius asserts in debug builds.
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       decoration: BoxDecoration(
         color: AppColors.mist,
         borderRadius: BorderRadius.circular(20),
-        border: const Border(
-          left: BorderSide(color: AppColors.sage, width: 4),
-          top: BorderSide(color: AppColors.border),
-          right: BorderSide(color: AppColors.border),
-          bottom: BorderSide(color: AppColors.border),
-        ),
+        border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.sage,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(19),
+        child: Stack(
+          children: [
+            const Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: SizedBox(
+                width: 4,
+                child: ColoredBox(color: AppColors.sage),
               ),
-              const SizedBox(width: 8),
-              Text(
-                widget.title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _elapsed(),
-            style: AppTheme.mono(
-              fontSize: 40,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.sinceLabel,
-            style: AppTheme.mono(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+              child: _cardContent(context),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
 
+  Widget _cardContent(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.sage,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              widget.title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Text(
+          _elapsed(),
+          style: AppTheme.mono(
+            fontSize: 40,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          widget.sinceLabel,
+          style: AppTheme.mono(fontSize: 14, color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+}

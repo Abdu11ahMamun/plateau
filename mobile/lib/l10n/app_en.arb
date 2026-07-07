@@ -9,6 +9,18 @@
     "description": "Heading above the email field on the login screen."
   },
   "loginButton": "Send code",
+  "loginPlaceholder": "karim@example.com",
+  "loginFirstTime": "First time here? Contact your manager",
+  "otpHeading": "Enter the code",
+  "otpResend": "Resend code",
+  "otpResendIn": "Resend code (0:{seconds})",
+  "@otpResendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "otpTitle": "Code sent to",
   "@otpTitle": {
     "description": "Prefix shown before the email address on the OTP screen."

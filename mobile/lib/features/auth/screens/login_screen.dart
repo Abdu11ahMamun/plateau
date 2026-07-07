@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textInputAction: TextInputAction.go,
                       onSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        hintText: 'karim@exemple.fr',
+                        hintText: l10n.loginPlaceholder,
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
@@ -114,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Première connexion ? Contactez votre responsable',
+                l10n.loginFirstTime,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,

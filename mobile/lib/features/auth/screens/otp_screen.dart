@@ -98,7 +98,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Saisissez le code',
+                      l10n.otpHeading,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -148,16 +148,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               const SizedBox(height: 20),
               _remaining > 0
                   ? Text(
-                      'Renvoyer le code (0:${_remaining.toString().padLeft(2, '0')})',
+                      l10n.otpResendIn(_remaining.toString().padLeft(2, '0')),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppColors.textSecondary,
                           ),
                     )
                   : TextButton(
                       onPressed: _resend,
-                      child: const Text(
-                        'Renvoyer le code',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.otpResend,
+                        style: const TextStyle(
                           color: AppColors.sage,
                           fontWeight: FontWeight.w600,
                         ),
