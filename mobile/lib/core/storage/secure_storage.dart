@@ -13,6 +13,7 @@ class SecureStorage {
   static const _kRefreshToken = 'refresh_token';
   static const _kInstallId = 'device_install_id';
   static const _kUserName = 'user_name';
+  static const _kUserEmail = 'user_email';
 
   Future<String?> readToken() => _storage.read(key: _kToken);
   Future<void> writeToken(String value) =>
@@ -30,10 +31,15 @@ class SecureStorage {
   Future<void> writeUserName(String value) =>
       _storage.write(key: _kUserName, value: value);
 
+  Future<String?> readUserEmail() => _storage.read(key: _kUserEmail);
+  Future<void> writeUserEmail(String value) =>
+      _storage.write(key: _kUserEmail, value: value);
+
   Future<void> clearSession() async {
     await _storage.delete(key: _kToken);
     await _storage.delete(key: _kRefreshToken);
     await _storage.delete(key: _kUserName);
+    await _storage.delete(key: _kUserEmail);
     // Note: installId is intentionally kept so the device stays enrolled.
   }
 }

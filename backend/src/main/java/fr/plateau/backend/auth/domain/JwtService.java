@@ -73,4 +73,20 @@ public class JwtService {
         refreshTokenRepository.save(refreshToken);
         return raw;
     }
+
+    /// Validates a raw refresh token and marks it used (single-use rotation).
+    /// Returns the owning user id, or throws if no live token matches.
+    @Transactional
+    public Long redeemRefreshToken(String rawToken) {
+        // Tokens are stored bcrypt-hashed, so we match against live candidates.
+        // Fine at prototype scale; revisit with a token-id scheme later.
+        for (RefreshToken candidate : refreshTokenRepository.findByUsedFalseAndExpiresAtAfter(Instant.now())) {
+            if (passwordEncoder.matches(rawToken, candidate.getTokenHash())) {
+                candidate.markUsed();
+                refreshTokenRepository.save(candidate);
+                return candidate.getUserId();
+            }
+        }
+        throw new UnauthorizedException("Invalid refresh token");
+    }
 }

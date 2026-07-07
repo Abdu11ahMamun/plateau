@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
+import '../../../core/offline/offline_queue.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/widgets/plateau_bottom_nav.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../punch/data/punch_errors.dart';
 import '../../punch/providers/punch_provider.dart';
 
 /// Whether the on-screen punch trigger (bottom-right FAB) is shown. Debug
@@ -33,15 +35,25 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _nfcActive = false;
   bool _punching = false;
+  AppLifecycleListener? _lifecycle;
 
   @override
   void initState() {
     super.initState();
     _startNfc();
+    // Replay any offline punches now and whenever the app comes back to
+    // the foreground (e.g. after connectivity returns).
+    _lifecycle = AppLifecycleListener(
+      onResume: () => ref.read(punchControllerProvider.notifier).syncQueue(),
+    );
+    Future.microtask(
+      () => ref.read(punchControllerProvider.notifier).syncQueue(),
+    );
   }
 
   @override
   void dispose() {
+    _lifecycle?.dispose();
     if (_nfcActive) NfcManager.instance.stopSession();
     super.dispose();
   }
@@ -65,13 +77,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_punching) return;
     setState(() => _punching = true);
     try {
-      final result =
+      final outcome =
           await ref.read(punchControllerProvider.notifier).punch('NFC');
-      if (mounted) context.go('/punch-result', extra: result);
-    } catch (_) {
+      if (!mounted) return;
+      if (outcome.queued) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.offlineQueued),
+          ),
+        );
+      } else {
+        context.go('/punch-result', extra: outcome.result);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.nfcError)),
+          SnackBar(
+            content: Text(punchErrorMessage(AppLocalizations.of(context)!, e)),
+          ),
         );
       }
     } finally {
@@ -100,6 +123,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             greeting: '${l10n.homeGreeting(firstName)} 👋',
             time: time,
             onLogout: () => ref.read(authControllerProvider.notifier).logout(),
+          ),
+          ValueListenableBuilder(
+            valueListenable: ref.watch(offlineQueueProvider).listenable,
+            builder: (context, box, _) {
+              final pending = box.length;
+              if (pending == 0) return const SizedBox.shrink();
+              return _PendingSyncBanner(label: l10n.pendingSync(pending));
+            },
           ),
           Expanded(
             child: Padding(
@@ -145,6 +176,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             )
           : null,
       bottomNavigationBar: const PlateauBottomNav(currentIndex: 0),
+    );
+  }
+}
+
+/// Amber strip shown while offline punches are waiting to sync.
+class _PendingSyncBanner extends StatelessWidget {
+  const _PendingSyncBanner({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.amber.withValues(alpha: 0.18),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          const Icon(Icons.bolt, size: 18, color: AppColors.amber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

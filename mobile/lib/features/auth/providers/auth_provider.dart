@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/dio_client.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../data/auth_repository.dart';
 
@@ -11,6 +12,7 @@ class AuthState {
     required this.status,
     this.pendingEmail,
     this.userName,
+    this.userEmail,
     this.busy = false,
     this.error,
   });
@@ -18,6 +20,7 @@ class AuthState {
   final AuthStatus status;
   final String? pendingEmail;
   final String? userName;
+  final String? userEmail;
   final bool busy;
   final String? error;
 
@@ -25,6 +28,7 @@ class AuthState {
     AuthStatus? status,
     String? pendingEmail,
     String? userName,
+    String? userEmail,
     bool? busy,
     String? error,
   }) {
@@ -32,6 +36,7 @@ class AuthState {
       status: status ?? this.status,
       pendingEmail: pendingEmail ?? this.pendingEmail,
       userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
       busy: busy ?? this.busy,
       error: error,
     );
@@ -44,6 +49,13 @@ class AuthController extends Notifier<AuthState> {
 
   @override
   AuthState build() {
+    // The dio layer bumps this when a 401 survives the refresh attempt —
+    // storage is already cleared there; we just flip the app to logged-out.
+    ref.listen(sessionExpiredTickProvider, (previous, next) {
+      if (state.status == AuthStatus.authenticated) {
+        state = const AuthState(status: AuthStatus.unauthenticated);
+      }
+    });
     Future.microtask(_bootstrap);
     return const AuthState(status: AuthStatus.unknown);
   }
@@ -52,7 +64,12 @@ class AuthController extends Notifier<AuthState> {
     final token = await _storage.readToken();
     if (token != null && token.isNotEmpty) {
       final name = await _storage.readUserName();
-      state = state.copyWith(status: AuthStatus.authenticated, userName: name);
+      final email = await _storage.readUserEmail();
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        userName: name,
+        userEmail: email,
+      );
     } else {
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
@@ -85,6 +102,7 @@ class AuthController extends Notifier<AuthState> {
       await _storage.writeToken(result.token);
       await _storage.writeRefreshToken(result.refreshToken);
       await _storage.writeUserName(result.userName);
+      await _storage.writeUserEmail(email);
 
       // Enrollment is the gate for punching — must succeed before Home.
       await _repo.enrollDevice();
@@ -93,6 +111,7 @@ class AuthController extends Notifier<AuthState> {
         busy: false,
         status: AuthStatus.authenticated,
         userName: result.userName,
+        userEmail: email,
       );
       return true;
     } on DioException catch (e) {

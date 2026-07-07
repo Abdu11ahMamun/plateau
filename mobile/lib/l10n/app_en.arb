@@ -80,6 +80,21 @@
     }
   },
   "hoursContract": "Contract: {contract}h/week — +{over} over",
+  "errSessionExpired": "Session expired — please log in again",
+  "errAlreadyRecorded": "Already recorded",
+  "errValidation": "Validation error",
+  "errUnknown": "Something went wrong — try again",
+  "offlineQueued": "Saved offline — will sync automatically",
+  "pendingSync": "{count, plural, =1{1 punch pending sync} other{{count} punches pending sync}}",
+  "@pendingSync": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileLanguage": "Language",
+  "profileSignOut": "Sign out",
   "@hoursContract": {
     "placeholders": {
       "contract": {

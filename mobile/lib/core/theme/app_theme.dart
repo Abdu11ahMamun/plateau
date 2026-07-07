@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'colors.dart';
 
 /// App-wide theme. Inter for all body text; JetBrains Mono is reserved for
-/// times/durations and exposed via [AppTheme.mono].
+/// times/durations and exposed via [AppTheme.mono]. Both are bundled assets
+/// (see pubspec fonts) — nothing is fetched at runtime.
 abstract final class AppTheme {
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: 'Inter',
       scaffoldBackgroundColor: AppColors.cream,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.sage,
@@ -20,7 +21,7 @@ abstract final class AppTheme {
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      textTheme: base.textTheme.apply(
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
@@ -38,7 +39,8 @@ abstract final class AppTheme {
     FontWeight fontWeight = FontWeight.w600,
     Color? color,
   }) {
-    return GoogleFonts.jetBrainsMono(
+    return TextStyle(
+      fontFamily: 'JetBrains Mono',
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

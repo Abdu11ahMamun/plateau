@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../data/punch_errors.dart';
 import '../providers/punch_provider.dart';
 
 const _minReasonLength = 10;
@@ -38,14 +39,26 @@ class _ManualPunchScreenState extends ConsumerState<ManualPunchScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _submitting = true);
     try {
-      final result = await ref
+      final outcome = await ref
           .read(punchControllerProvider.notifier)
           .punch('MANUAL', note: _reasonController.text.trim());
-      if (mounted) context.go('/punch-result', extra: result);
-    } catch (_) {
+      if (!mounted) return;
+      if (outcome.queued) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.offlineQueued),
+          ),
+        );
+        context.go('/home');
+      } else {
+        context.go('/punch-result', extra: outcome.result);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.nfcError)),
+          SnackBar(
+            content: Text(punchErrorMessage(AppLocalizations.of(context)!, e)),
+          ),
         );
       }
     } finally {

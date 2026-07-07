@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/punch_repository.dart';
@@ -11,13 +12,28 @@ class PunchController extends Notifier<AsyncValue<PunchResult?>> {
   @override
   AsyncValue<PunchResult?> build() => const AsyncValue.data(null);
 
-  /// Punches via [method] ("NFC" or "MANUAL"). On success the result becomes
-  /// the new state; on failure the previous state is kept and the error is
-  /// rethrown for the caller to surface (snackbar).
-  Future<PunchResult> punch(String method, {String? note}) async {
-    final result = await _repo.punch(method, note: note);
-    state = AsyncValue.data(result);
-    return result;
+  /// Punches via [method] ("NFC" or "MANUAL"). A server-confirmed punch
+  /// becomes the new state; a queued (offline) punch leaves state untouched.
+  /// Non-connectivity errors are rethrown for the caller to surface.
+  Future<PunchOutcome> punch(String method, {String? note}) async {
+    final outcome = await _repo.punch(method, note: note);
+    final result = outcome.result;
+    if (result != null) {
+      state = AsyncValue.data(result);
+    }
+    return outcome;
+  }
+
+  /// Replays the offline queue. Quiet on failure (still offline).
+  Future<void> syncQueue() async {
+    try {
+      final sent = await _repo.flushQueue();
+      if (sent > 0) {
+        debugPrint('🔄 SYNC — $sent punches uploaded');
+      }
+    } catch (_) {
+      // Still offline or server unhappy — queue is preserved, retry later.
+    }
   }
 }
 

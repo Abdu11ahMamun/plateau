@@ -93,6 +93,17 @@ public class OtpService {
         return new TokenPair(token, refreshToken, user);
     }
 
+    /// Redeems a refresh token for a fresh access + refresh token pair.
+    @Transactional
+    public TokenPair refresh(String rawRefreshToken) {
+        Long userId = jwtService.redeemRefreshToken(rawRefreshToken);
+        Employee user = employeeRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("Utilisateur introuvable"));
+        String token = jwtService.generateToken(user.getId(), user.getTenantId(), user.getRole());
+        String refreshToken = jwtService.generateRefreshToken(user.getId());
+        return new TokenPair(token, refreshToken, user);
+    }
+
     private Employee findUser(String identifier) {
         return employeeRepository.findByTenantIdAndEmail(TENANT_ID, identifier)
                 .or(() -> employeeRepository.findByTenantIdAndPhone(TENANT_ID, identifier))

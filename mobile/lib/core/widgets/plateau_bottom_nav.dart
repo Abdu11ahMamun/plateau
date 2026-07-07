@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../theme/colors.dart';
 
-/// Shared bottom navigation. Home and My hours are wired; Profile lands in
-/// a later milestone and stays inert for now.
+/// Shared bottom navigation for the three top-level tabs.
 class PlateauBottomNav extends StatelessWidget {
   const PlateauBottomNav({super.key, required this.currentIndex});
 
@@ -30,7 +29,7 @@ class PlateauBottomNav extends StatelessWidget {
           case 1:
             context.go('/my-hours');
           case 2:
-            break; // Profile — later milestone.
+            context.go('/profile');
         }
       },
       items: [

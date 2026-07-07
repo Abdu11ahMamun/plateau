@@ -68,4 +68,8 @@ public class RefreshToken {
     public boolean isUsed() {
         return used;
     }
+
+    public void markUsed() {
+        this.used = true;
+    }
 }

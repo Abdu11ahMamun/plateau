@@ -32,6 +32,15 @@ public class AuthController {
     @PostMapping("/otp/verify")
     public AuthResponse verifyOtp(@Valid @RequestBody OtpVerifyRequest request) {
         OtpService.TokenPair tokenPair = otpService.verifyOtp(request.identifier(), request.code());
+        return toResponse(tokenPair);
+    }
+
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
+        return toResponse(otpService.refresh(request.refreshToken()));
+    }
+
+    private static AuthResponse toResponse(OtpService.TokenPair tokenPair) {
         Employee user = tokenPair.user();
         return new AuthResponse(
                 tokenPair.token(),
@@ -43,6 +52,9 @@ public class AuthController {
     }
 
     public record OtpVerifyRequest(@NotBlank String identifier, @NotBlank String code) {
+    }
+
+    public record RefreshRequest(@NotBlank String refreshToken) {
     }
 
     public record AuthResponse(String token, String refreshToken, UserSummary user) {
