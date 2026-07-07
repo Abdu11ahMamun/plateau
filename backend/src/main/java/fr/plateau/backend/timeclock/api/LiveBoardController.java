@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import fr.plateau.backend.common.ForbiddenException;
 import fr.plateau.backend.common.SecurityUtils;
+import fr.plateau.backend.employee.data.Employee;
 import fr.plateau.backend.employee.data.EmployeeRepository;
 import fr.plateau.backend.timeclock.data.SessionRepository;
 import fr.plateau.backend.timeclock.data.TimeEventRepository;
@@ -43,15 +44,15 @@ public class LiveBoardController {
                     Instant clockedInAt = timeEventRepository.findById(session.getInEventId())
                             .map(event -> event.getEventTime())
                             .orElse(session.getCreatedAt());
-                    String name = employeeRepository.findById(session.getUserId())
-                            .map(employee -> employee.getName())
-                            .orElse("Unknown");
+                    Employee employee = employeeRepository.findById(session.getUserId()).orElse(null);
+                    String name = employee != null ? employee.getName() : "Unknown";
+                    String employeeRole = employee != null ? employee.getRole().name() : null;
                     long runningMinutes = Duration.between(clockedInAt, now).toMinutes();
-                    return new LiveEntry(session.getUserId(), name, clockedInAt, runningMinutes);
+                    return new LiveEntry(session.getUserId(), name, employeeRole, clockedInAt, runningMinutes);
                 })
                 .toList();
     }
 
-    public record LiveEntry(Long userId, String name, Instant clockedInAt, long runningMinutes) {
+    public record LiveEntry(Long userId, String name, String role, Instant clockedInAt, long runningMinutes) {
     }
 }

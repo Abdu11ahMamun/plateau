@@ -1,33 +1,106 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import type { ComponentType, SVGProps } from 'react';
+import { useAuthStore } from '../store/auth.store';
+import { initials } from '../lib/format';
+import {
+  BoardIcon,
+  UsersIcon,
+  CalendarIcon,
+  CashIcon,
+  LogoutIcon,
+} from './icons';
+
+type Icon = ComponentType<SVGProps<SVGSVGElement>>;
+
+function titleCase(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+}
+
+function SoonBadge() {
+  return (
+    <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/50">
+      Soon
+    </span>
+  );
+}
+
+function ComingSoonLink({ label, Icon }: { label: string; Icon: Icon }) {
+  return (
+    <span className="flex cursor-default items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-300">
+      <Icon className="h-5 w-5 shrink-0" />
+      {label}
+      <SoonBadge />
+    </span>
+  );
+}
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  const name = user?.name ?? '';
+  const role = user?.role ? titleCase(user.role) : '';
+
+  function handleLogout() {
+    clearAuth();
+    navigate('/login', { replace: true });
+  }
+
   return (
     <aside className="flex w-56 flex-col bg-ink text-white">
-      <div className="px-6 py-6">
-        <span className="text-xl font-bold">Plateau</span>
+      <div className="px-5 py-6">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-sage text-sm font-bold text-white">
+            P
+          </span>
+          <span className="text-xl font-bold">Plateau</span>
+        </div>
       </div>
 
-      <nav className="flex flex-col gap-1 px-3">
+      <div className="mx-5 border-t border-white/10" />
+
+      <nav className="flex flex-col gap-1 px-3 py-4">
         <NavLink
           to="/"
           end
           className={({ isActive }) =>
-            `rounded-lg px-3 py-2 text-sm font-medium transition ${
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
               isActive
                 ? 'bg-sage text-white'
-                : 'text-white/70 hover:bg-white/5'
+                : 'text-slate-300 hover:bg-white/5'
             }`
           }
         >
+          <BoardIcon className="h-5 w-5 shrink-0" />
           Live Board
         </NavLink>
 
-        {/* Employees — not built yet. */}
-        <span className="flex cursor-default items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-white/40">
-          Employees
-          <span className="text-[10px] uppercase tracking-wide">soon</span>
-        </span>
+        <ComingSoonLink label="Employees" Icon={UsersIcon} />
+        <ComingSoonLink label="Plannings" Icon={CalendarIcon} />
+        <ComingSoonLink label="Paie" Icon={CashIcon} />
       </nav>
+
+      <div className="mt-auto">
+        <div className="mx-5 border-t border-white/10" />
+        <div className="flex items-center gap-3 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage text-xs font-bold text-white">
+            {initials(name)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">{name}</p>
+            <p className="text-xs text-slate-400">{role}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Sign out"
+            className="text-slate-300 transition hover:text-white"
+          >
+            <LogoutIcon className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
     </aside>
   );
 }
