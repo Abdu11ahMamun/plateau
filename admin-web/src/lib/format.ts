@@ -7,7 +7,30 @@ export function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-import { differenceInSeconds, parseISO } from 'date-fns';
+import { differenceInSeconds, parseISO, format, addMonths } from 'date-fns';
+
+/** "2026-07" → "July 2026". */
+export function monthLabel(ym: string): string {
+  return format(parseISO(`${ym}-01`), 'MMMM yyyy');
+}
+
+/** Shift a "YYYY-MM" month by delta months, returning "YYYY-MM". */
+export function shiftMonth(ym: string, delta: number): string {
+  return format(addMonths(parseISO(`${ym}-01`), delta), 'yyyy-MM');
+}
+
+/** "2026-07-07" → "Mon 7 Jul". */
+export function attendanceDateLabel(iso: string): string {
+  return format(parseISO(iso), 'EEE d MMM');
+}
+
+/** 508 → "8h 28min"; null → "—". */
+export function durationLabel(minutes: number | null): string {
+  if (minutes == null) return '—';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min`;
+}
 
 /**
  * Live-ticking running label from a clock-in ISO and the current time.

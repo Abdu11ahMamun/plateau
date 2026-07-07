@@ -1,5 +1,6 @@
 package fr.plateau.backend.timeclock.data;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +14,11 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     @Query("SELECT s FROM Session s WHERE s.tenantId = :tenantId AND s.outEventId IS NULL")
     List<Session> findOpenSessions(@Param("tenantId") Long tenantId);
+
+    @Query("SELECT s FROM Session s WHERE s.tenantId = :tenantId "
+            + "AND s.workDate >= :start AND s.workDate < :end")
+    List<Session> findByMonth(
+            @Param("tenantId") Long tenantId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end);
 }

@@ -64,6 +64,14 @@ export function RefreshIcon(props: IconProps) {
   );
 }
 
+export function ClipboardIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 4.5h6a.75.75 0 0 1 .75.75V6a.75.75 0 0 1-.75.75H9A.75.75 0 0 1 8.25 6v-.75A.75.75 0 0 1 9 4.5Zm6.75.75h1.5A1.5 1.5 0 0 1 18.75 6.75v12A1.5 1.5 0 0 1 17.25 20.25H6.75A1.5 1.5 0 0 1 5.25 18.75v-12A1.5 1.5 0 0 1 6.75 5.25h1.5M9 11.25h6M9 14.25h6M9 17.25h3" />
+    </svg>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

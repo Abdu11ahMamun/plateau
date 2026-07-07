@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/auth.store';
 import { initials } from '../lib/format';
 import {
   BoardIcon,
+  ClipboardIcon,
   UsersIcon,
   CalendarIcon,
   CashIcon,
@@ -74,6 +75,20 @@ export default function Sidebar() {
         >
           <BoardIcon className="h-5 w-5 shrink-0" />
           Live Board
+        </NavLink>
+
+        <NavLink
+          to="/attendance"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-sage text-white'
+                : 'text-slate-300 hover:bg-white/5'
+            }`
+          }
+        >
+          <ClipboardIcon className="h-5 w-5 shrink-0" />
+          Attendance
         </NavLink>
 
         <ComingSoonLink label="Employees" Icon={UsersIcon} />
