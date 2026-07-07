@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
 /// Full-width sage button with a 48dp+ touch target and a busy spinner.
+/// Pass a null [onPressed] to render it disabled.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -12,7 +13,7 @@ class PrimaryButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool busy;
 
   @override

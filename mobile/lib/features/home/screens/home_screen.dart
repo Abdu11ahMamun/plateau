@@ -9,6 +9,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/colors.dart';
+import '../../../core/widgets/plateau_bottom_nav.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../punch/providers/punch_provider.dart';
@@ -120,15 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                   const SizedBox(height: 24),
                   TextButton(
-                    onPressed: () {
-                      // Manual punch flow arrives in M3.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Bientôt disponible'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.push('/manual-punch'),
                     child: Text(
                       l10n.homeManual,
                       style: const TextStyle(
@@ -151,11 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: const Icon(Icons.nfc, color: Colors.white, size: 20),
             )
           : null,
-      bottomNavigationBar: _BottomNav(
-        homeLabel: l10n.navHome,
-        hoursLabel: l10n.navHours,
-        profileLabel: l10n.navProfile,
-      ),
+      bottomNavigationBar: const PlateauBottomNav(currentIndex: 0),
     );
   }
 }
@@ -370,39 +359,3 @@ class _ClockedInCardState extends State<_ClockedInCard> {
   }
 }
 
-/// Static bottom navigation. Only "Accueil" is wired in M1.
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({
-    required this.homeLabel,
-    required this.hoursLabel,
-    required this.profileLabel,
-  });
-
-  final String homeLabel;
-  final String hoursLabel;
-  final String profileLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 0,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: AppColors.cream,
-      selectedItemColor: AppColors.sage,
-      unselectedItemColor: AppColors.textSecondary,
-      showSelectedLabels: true,
-      showUnselectedLabels: true,
-      items: [
-        BottomNavigationBarItem(icon: const Icon(Icons.home), label: homeLabel),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.access_time),
-          label: hoursLabel,
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.person),
-          label: profileLabel,
-        ),
-      ],
-    );
-  }
-}

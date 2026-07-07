@@ -6,7 +6,9 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/hours/screens/my_hours_screen.dart';
 import '../../features/punch/data/punch_repository.dart';
+import '../../features/punch/screens/manual_punch_screen.dart';
 import '../../features/punch/screens/punch_result_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 
@@ -45,6 +47,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/otp', builder: (_, _) => const OtpScreen()),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+      GoRoute(
+        path: '/manual-punch',
+        builder: (_, _) => const ManualPunchScreen(),
+      ),
+      GoRoute(path: '/my-hours', builder: (_, _) => const MyHoursScreen()),
       GoRoute(
         path: '/punch-result',
         // Only reachable with a PunchResult in hand (set by the punch flow);

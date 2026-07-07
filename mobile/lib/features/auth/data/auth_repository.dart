@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/dio_client.dart';
@@ -44,6 +45,7 @@ class AuthRepository {
     );
     final body = res.data as Map<String, dynamic>;
     final user = body['user'] as Map<String, dynamic>;
+    debugPrint('✅ LOGIN — user: $identifier | token saved');
     return AuthResult(
       token: body['token'] as String,
       refreshToken: body['refreshToken'] as String,
@@ -72,8 +74,10 @@ class AuthRepository {
           'platform': 'ANDROID',
         },
       );
+      debugPrint('📱 DEVICE ENROLLED — installId: $installId');
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {
+        debugPrint('📱 DEVICE ENROLLED (already) — installId: $installId');
         return; // already enrolled — gate satisfied
       }
       rethrow;

@@ -55,6 +55,41 @@
   },
   "punchOutRecorded": "Exit recorded",
   "nfcError": "Badge not recognized",
+  "manualTitle": "Manual clock in/out",
+  "manualWarning": "This entry will be flagged for manager review",
+  "manualReasonLabel": "Reason (required)",
+  "manualReasonTooShort": "At least 10 characters",
+  "manualSubmit": "Submit",
+  "punchTypeIn": "IN",
+  "punchTypeOut": "OUT",
+  "hoursWeek": "Week {number}",
+  "@hoursWeek": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursRest": "Rest",
+  "hoursTotal": "Total: {duration}",
+  "@hoursTotal": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursContract": "Contract: {contract}h/week — +{over} over",
+  "@hoursContract": {
+    "placeholders": {
+      "contract": {
+        "type": "int"
+      },
+      "over": {
+        "type": "String"
+      }
+    }
+  },
   "navHome": "Home",
   "navHours": "My hours",
   "navProfile": "Profile"
