@@ -1,12 +1,32 @@
-function App() {
-  return (
-    <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="rounded-2xl border border-plateau-border bg-mist px-8 py-6 text-center">
-        <h1 className="text-2xl font-bold text-ink">Plateau Admin</h1>
-        <p className="mt-1 text-sm text-slate">Setup complete — Tailwind is wired.</p>
-      </div>
-    </div>
-  )
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactElement } from 'react';
+import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
+import LiveBoardPage from './pages/LiveBoardPage';
+import { useAuthStore } from './store/auth.store';
+
+function RequireAuth({ children }: { children: ReactElement }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Layout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<LiveBoardPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
