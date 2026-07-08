@@ -32,6 +32,13 @@ export function durationLabel(minutes: number | null): string {
   return h > 0 ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min`;
 }
 
+/** Sum of minutes → "47h 23min" (always shows hours). */
+export function totalHoursLabel(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${String(m).padStart(2, '0')}min`;
+}
+
 /**
  * Live-ticking running label from a clock-in ISO and the current time.
  * < 60min → "mm:ss" (e.g. "00:43", "43:12"); ≥ 60min → "1h 23min".

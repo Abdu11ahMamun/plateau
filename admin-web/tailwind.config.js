@@ -25,10 +25,16 @@ export default {
         },
         amber: {
           DEFAULT: '#F59E0B',
+          50: '#FEFBF3',
           100: '#FEF3C7',
+          600: '#D97706',
           700: '#B45309',
         },
-        rouge: '#EF4444',
+        rouge: {
+          DEFAULT: '#EF4444',
+          100: '#FEE2E2',
+          700: '#B91C1C',
+        },
         cream: '#FAF9F6',
         mist: '#F0EFE9',
         'plateau-border': '#E2E0D8',
