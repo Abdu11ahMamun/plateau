@@ -40,6 +40,13 @@
   "pendingSync": "{count, plural, =1{1 pointage en attente de synchronisation} other{{count} pointages en attente de synchronisation}}",
   "profileLanguage": "Langue",
   "profileSignOut": "Se déconnecter",
+  "myHoursTitle": "Mes heures",
+  "myHoursTotal": "Ce mois-ci : {total}",
+  "myHoursStillIn": "En cours",
+  "myHoursNoSessions": "Aucune session ce mois-ci",
+  "myHoursNoSessionsHint": "Vos pointages apparaîtront ici",
+  "myHoursError": "Impossible de charger les heures",
+  "myHoursRetry": "Réessayer",
   "navHome": "Accueil",
   "navHours": "Mes heures",
   "navProfile": "Profil"

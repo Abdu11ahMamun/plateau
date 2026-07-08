@@ -107,6 +107,20 @@
   },
   "profileLanguage": "Language",
   "profileSignOut": "Sign out",
+  "myHoursTitle": "My hours",
+  "myHoursTotal": "This month: {total}",
+  "@myHoursTotal": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "myHoursStillIn": "Still in",
+  "myHoursNoSessions": "No sessions this month",
+  "myHoursNoSessionsHint": "Your clock-ins will appear here",
+  "myHoursError": "Could not load hours",
+  "myHoursRetry": "Retry",
   "@hoursContract": {
     "placeholders": {
       "contract": {
