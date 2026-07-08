@@ -1,5 +1,6 @@
 package fr.plateau.backend.auth.data;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +15,6 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     List<Device> findByUserIdAndStatus(Long userId, DeviceStatus status);
 
     List<Device> findByUserId(Long userId);
+
+    List<Device> findByUserIdInAndStatus(Collection<Long> userIds, DeviceStatus status);
 }

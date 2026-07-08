@@ -145,3 +145,27 @@ export function XIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function DeviceIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8.25 3.75h7.5A1.5 1.5 0 0 1 17.25 5.25v13.5A1.5 1.5 0 0 1 15.75 20.25h-7.5A1.5 1.5 0 0 1 6.75 18.75V5.25A1.5 1.5 0 0 1 8.25 3.75Zm2.25 13.5h3" />
+    </svg>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
+export function ArchiveIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3.75 6.75h16.5M4.5 6.75v11.25a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V6.75M4.5 6.75 6 3.75h12l1.5 3M9.75 11.25h4.5" />
+    </svg>
+  );
+}

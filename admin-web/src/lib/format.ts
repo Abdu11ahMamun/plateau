@@ -74,6 +74,16 @@ export function clockInTime(iso: string): string {
   });
 }
 
+/** ISO instant → "6 Jul" (short, for the device-enrolled line). */
+export function shortDateLabel(iso: string): string {
+  return format(parseISO(iso), 'd MMM');
+}
+
+/** ISO instant → "6 Jul 2026" (for the Joined column). */
+export function joinedDateLabel(iso: string): string {
+  return format(parseISO(iso), 'd MMM yyyy');
+}
+
 /** "Monday, 7 July 2026" without pulling in date-fns locales. */
 export function todayLabel(): string {
   return new Date().toLocaleDateString('en-GB', {

@@ -18,6 +18,26 @@ export interface AttendanceRow {
   flagged: boolean;
 }
 
+export interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: 'OWNER' | 'MANAGER' | 'EMPLOYEE';
+  status: 'INVITED' | 'ACTIVE' | 'ARCHIVED';
+  deviceStatus: 'ACTIVE' | 'NONE';
+  devicePlatform: string | null;
+  enrolledAt: string | null; // ISO
+  createdAt: string; // ISO
+}
+
+export interface CreateEmployeeInput {
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'EMPLOYEE' | 'MANAGER';
+}
+
 export interface AuthUser {
   id: number;
   name: string;

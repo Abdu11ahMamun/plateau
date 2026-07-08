@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import fr.plateau.backend.employee.data.Employee;
 import fr.plateau.backend.employee.domain.EmployeeService;
 import jakarta.validation.Valid;
 
@@ -26,13 +25,13 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public List<Employee> list() {
+    public List<EmployeeView> list() {
         return employeeService.listEmployees();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Employee create(@Valid @RequestBody CreateEmployeeRequest request) {
+    public EmployeeView create(@Valid @RequestBody CreateEmployeeRequest request) {
         return employeeService.createEmployee(request.name(), request.phone(), request.email(), request.role());
     }
 

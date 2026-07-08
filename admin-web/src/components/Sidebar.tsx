@@ -91,7 +91,20 @@ export default function Sidebar() {
           Attendance
         </NavLink>
 
-        <ComingSoonLink label="Employees" Icon={UsersIcon} />
+        <NavLink
+          to="/employees"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-sage text-white'
+                : 'text-slate-300 hover:bg-white/5'
+            }`
+          }
+        >
+          <UsersIcon className="h-5 w-5 shrink-0" />
+          Employees
+        </NavLink>
+
         <ComingSoonLink label="Plannings" Icon={CalendarIcon} />
         <ComingSoonLink label="Paie" Icon={CashIcon} />
       </nav>
