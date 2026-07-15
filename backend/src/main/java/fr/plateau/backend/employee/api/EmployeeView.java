@@ -1,15 +1,15 @@
 package fr.plateau.backend.employee.api;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 /**
  * Employee row for the admin panel. Flattens the user record and folds in the
- * employee's active device (if any) so the panel can show enrollment status
- * without a second call.
+ * employee's active device and current contract so the panel can display them
+ * without additional API calls.
  *
  * <p>{@code deviceStatus} is {@code "ACTIVE"} when the employee has an active
- * device (then {@code devicePlatform}/{@code enrolledAt} are populated), or
- * {@code "NONE"} when they have never enrolled.
+ * device, or {@code "NONE"} when they have never enrolled.
  */
 public record EmployeeView(
         Long id,
@@ -21,5 +21,15 @@ public record EmployeeView(
         String deviceStatus,
         String devicePlatform,
         Instant enrolledAt,
-        Instant createdAt) {
+        CurrentContractView currentContract,
+        Instant createdAt
+) {
+
+    public record CurrentContractView(
+            String type,
+            Integer weeklyMinutes,
+            Integer hourlyWageCents,
+            LocalDate startDate
+    ) {
+    }
 }

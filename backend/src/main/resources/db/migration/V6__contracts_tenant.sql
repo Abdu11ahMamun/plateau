@@ -1,0 +1,11 @@
+--ALTER TABLE contracts ADD COLUMN tenant_id BIGINT NULL AFTER user_id;
+--
+--UPDATE contracts c
+--JOIN users u ON c.user_id = u.id
+--SET c.tenant_id = u.tenant_id;
+--
+--ALTER TABLE contracts MODIFY COLUMN tenant_id BIGINT NOT NULL;
+--
+--CREATE INDEX idx_contracts_tenant_user
+--    ON contracts (tenant_id, user_id);
+-- V6: contracts tenant column and index were applied manually; no changes needed

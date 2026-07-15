@@ -17,6 +17,7 @@ import fr.plateau.backend.auth.domain.DeviceStatus;
 import fr.plateau.backend.common.ConflictException;
 import fr.plateau.backend.common.NotFoundException;
 import fr.plateau.backend.employee.api.EmployeeView;
+import fr.plateau.backend.employee.data.Contract;
 import fr.plateau.backend.employee.data.Employee;
 import fr.plateau.backend.employee.data.EmployeeRepository;
 
@@ -24,45 +25,100 @@ import fr.plateau.backend.employee.data.EmployeeRepository;
 public class EmployeeService {
 
     private static final Long TENANT_ID = 1L;
-    private static final Logger log = LoggerFactory.getLogger(EmployeeService.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(EmployeeService.class);
 
     private final EmployeeRepository employeeRepository;
     private final DeviceRepository deviceRepository;
+    private final ContractService contractService;
 
-    public EmployeeService(EmployeeRepository employeeRepository, DeviceRepository deviceRepository) {
+    public EmployeeService(
+            EmployeeRepository employeeRepository,
+            DeviceRepository deviceRepository,
+            ContractService contractService
+    ) {
         this.employeeRepository = employeeRepository;
         this.deviceRepository = deviceRepository;
+        this.contractService = contractService;
     }
 
     @Transactional(readOnly = true)
     public List<EmployeeView> listEmployees() {
-        List<Employee> employees = employeeRepository.findAllByTenantId(TENANT_ID);
+        List<Employee> employees =
+                employeeRepository.findAllByTenantId(TENANT_ID);
+
         if (employees.isEmpty()) {
             return List.of();
         }
-        List<Long> ids = employees.stream().map(Employee::getId).toList();
+
+        List<Long> ids = employees.stream()
+                .map(Employee::getId)
+                .toList();
+
         // Last active device wins if an employee somehow has more than one.
         Map<Long, Device> activeByUser = deviceRepository
-                .findByUserIdInAndStatus(ids, DeviceStatus.ACTIVE).stream()
-                .collect(Collectors.toMap(Device::getUserId, Function.identity(), (a, b) -> b));
+                .findByUserIdInAndStatus(ids, DeviceStatus.ACTIVE)
+                .stream()
+                .collect(Collectors.toMap(
+                        Device::getUserId,
+                        Function.identity(),
+                        (a, b) -> b
+                ));
+
         return employees.stream()
-                .map(e -> toView(e, activeByUser.get(e.getId())))
+                .map(employee -> {
+                    Contract currentContract = contractService
+                            .getCurrentContract(
+                                    employee.getId(),
+                                    TENANT_ID
+                            )
+                            .orElse(null);
+
+                    return toView(
+                            employee,
+                            activeByUser.get(employee.getId()),
+                            currentContract
+                    );
+                })
                 .toList();
     }
 
     @Transactional
-    public EmployeeView createEmployee(String name, String phone, String email, Role role) {
-        String normalizedPhone = (phone == null || phone.isBlank()) ? null : phone.trim();
-        Employee employee = new Employee(TENANT_ID, name, normalizedPhone, email, role, EmployeeStatus.INVITED);
+    public EmployeeView createEmployee(
+            String name,
+            String phone,
+            String email,
+            Role role
+    ) {
+        String normalizedPhone =
+                phone == null || phone.isBlank()
+                        ? null
+                        : phone.trim();
+
+        Employee employee = new Employee(
+                TENANT_ID,
+                name,
+                normalizedPhone,
+                email,
+                role,
+                EmployeeStatus.INVITED
+        );
+
         try {
             Employee saved = employeeRepository.saveAndFlush(employee);
-            // Console-delivered invite, mirroring the OTP sender. A real
-            // deployment would email a first-time sign-in link here.
-            log.info("=== PLATEAU INVITE === To: {} Name: {} Role: {} ===", email, name, role);
-            // A brand-new employee has no device yet.
-            return toView(saved, null);
+
+            log.info(
+                    "=== PLATEAU INVITE === To: {} Name: {} Role: {} ===",
+                    email,
+                    name,
+                    role
+            );
+
+            return toView(saved, null, null);
         } catch (DataIntegrityViolationException ex) {
-            throw new ConflictException("An employee with this phone or email already exists");
+            throw new ConflictException(
+                    "An employee with this phone or email already exists"
+            );
         }
     }
 
@@ -70,22 +126,44 @@ public class EmployeeService {
     public void archiveEmployee(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .filter(e -> TENANT_ID.equals(e.getTenantId()))
-                .orElseThrow(() -> new NotFoundException("Employee " + id + " not found"));
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                "Employee " + id + " not found"
+                        )
+                );
+
         employee.setStatus(EmployeeStatus.ARCHIVED);
     }
 
-    private EmployeeView toView(Employee e, Device activeDevice) {
+    private EmployeeView toView(
+            Employee employee,
+            Device activeDevice,
+            Contract currentContract
+    ) {
         boolean enrolled = activeDevice != null;
+
+        EmployeeView.CurrentContractView currentContractView =
+                currentContract == null
+                        ? null
+                        : new EmployeeView.CurrentContractView(
+                        currentContract.getType(),
+                        currentContract.getWeeklyMinutes(),
+                        currentContract.getHourlyWageCents(),
+                        currentContract.getStartDate()
+                );
+
         return new EmployeeView(
-                e.getId(),
-                e.getName(),
-                e.getEmail(),
-                e.getPhone(),
-                e.getRole().name(),
-                e.getStatus().name(),
+                employee.getId(),
+                employee.getName(),
+                employee.getEmail(),
+                employee.getPhone(),
+                employee.getRole().name(),
+                employee.getStatus().name(),
                 enrolled ? "ACTIVE" : "NONE",
                 enrolled ? activeDevice.getPlatform() : null,
                 enrolled ? activeDevice.getEnrolledAt() : null,
-                e.getCreatedAt());
+                currentContractView,
+                employee.getCreatedAt()
+        );
     }
 }

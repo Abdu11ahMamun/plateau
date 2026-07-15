@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/secure_storage.dart';
 
-/// Base URL. Defaults to the Android-emulator alias for host localhost;
-/// override in prod builds with --dart-define=API_BASE_URL=...
+// Emulator: flutter run (uses default 10.0.2.2:8080)
+// Real device: flutter build apk --release \
+//   --dart-define=API_BASE_URL=http://192.168.68.102:8080 \
+//   --dart-define=DEBUG_PUNCH=true
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://10.0.2.2:8080',

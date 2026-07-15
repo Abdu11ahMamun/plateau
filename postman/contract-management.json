@@ -1,0 +1,128 @@
+{
+  "info": {
+    "name": "Contract Management",
+    "description": "QA collection for Plateau contract management endpoints (OTP login + contract CRUD/history).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "employeeId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "OTP Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"identifier\":\"karim@example.com\"}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/otp/request", "host": ["{{baseUrl}}"], "path": ["api", "auth", "otp", "request"] }
+      },
+      "response": []
+    },
+    {
+      "name": "OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "if (body.token) {",
+              "    pm.collectionVariables.set('token', body.token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"identifier\":\"karim@example.com\",\"code\":\"REPLACE_FROM_CONSOLE\"}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["api", "auth", "otp", "verify"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Contract - Valid CDI",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"type\":\"CDI\",\"weeklyMinutes\":1200,\"hourlyWageCents\":1231,\"startDate\":\"2026-07-01\"}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/employees/{{employeeId}}/contract", "host": ["{{baseUrl}}"], "path": ["api", "employees", "{{employeeId}}", "contract"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Contract - Invalid Type",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"type\":\"STAGE\",\"weeklyMinutes\":1200,\"hourlyWageCents\":1231,\"startDate\":\"2026-08-01\"}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/employees/{{employeeId}}/contract", "host": ["{{baseUrl}}"], "path": ["api", "employees", "{{employeeId}}", "contract"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Contract - Below SMIC",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"type\":\"CDI\",\"weeklyMinutes\":1200,\"hourlyWageCents\":1000,\"startDate\":\"2026-09-01\"}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/employees/{{employeeId}}/contract", "host": ["{{baseUrl}}"], "path": ["api", "employees", "{{employeeId}}", "contract"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Contract History",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/employees/{{employeeId}}/contracts", "host": ["{{baseUrl}}"], "path": ["api", "employees", "{{employeeId}}", "contracts"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Employee List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/employees", "host": ["{{baseUrl}}"], "path": ["api", "employees"] }
+      },
+      "response": []
+    }
+  ]
+}
