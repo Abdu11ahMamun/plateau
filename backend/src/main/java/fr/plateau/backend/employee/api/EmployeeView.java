@@ -19,6 +19,7 @@ public record EmployeeView(
         String role,
         String status,
         String deviceStatus,
+        Long deviceId,
         String devicePlatform,
         Instant enrolledAt,
         CurrentContractView currentContract,

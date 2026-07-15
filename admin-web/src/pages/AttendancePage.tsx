@@ -448,7 +448,8 @@ function SummaryCard({
   );
 }
 
-function Select({
+// Exported so EmployeesPage's filter bar matches this one exactly.
+export function Select({
   value,
   onChange,
   options,
@@ -472,7 +473,7 @@ function Select({
   );
 }
 
-function Pill({ label, onClear }: { label: string; onClear: () => void }) {
+export function Pill({ label, onClear }: { label: string; onClear: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2.5 pr-1.5 text-xs font-medium text-slate-600">
       {label}

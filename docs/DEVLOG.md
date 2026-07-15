@@ -74,3 +74,42 @@
   — self-caught, corrected, confirmed exact match on retest
 - Note: "View all in Attendance" link only shows when employee has
   >10 sessions this month (RECENT_LIMIT=10) — expected by design
+
+
+  ## 2026-07-15 · Batch 3 T9: Edit employee + resend invite — DONE
+- PUT /api/employees/{id}: partial update, reuses uq_tenant_email
+  constraint catch (not a pre-check) — same-email no-op handled free
+- Last-owner protection: 422 if demoting the only ACTIVE owner
+- Resend invite: reuses exact console log line from createEmployee
+- Reused ContractController's requireOwnerOrManager() pattern
+- 7/5 checks pass (5 required + audit log + 403 non-owner verified)
+
+## 2026-07-15 · Batch 3 T10: Edit modal + resend invite (React) — DONE
+- Edit modal: diffs against original prop, sends only changed fields
+- No client-side last-owner logic — backend 422 shown verbatim (by design)
+- Error messages read from err.response.data.detail, not guessed
+- Invite banner: auto-hides via query invalidation if 409 race (already joined)
+- Resend icon on EmployeesPage rows: stopPropagation pattern from T6 reused
+
+## 2026-07-15 · Batch 3 T11: Device revoke — SECURITY FIX FOUND
+- 🔴 Cross-tenant bug: revokeDevice had NO tenant check — any OWNER/MANAGER
+  on ANY tenant could revoke ANY device on ANY other tenant. Device entity
+  had no tenantId column; fixed via join through Employee.tenantId lookup.
+- Also fixed: wrong status code (401→403) for forbidden-but-authenticated case
+- Added deviceId to EmployeeView DTO (was missing — UI had no way to
+  address a device at all before this)
+- Curl-verified with 3 real accounts, not mocked
+- Frontend: revoke button + window.confirm() + cache invalidation, verified
+  list AND detail page both update (not just local state)
+- Lesson: "confirm this already works" tasks still need the agent to
+  actually verify, not assume — this one was silently broken
+
+
+  ## 2026-07-15 · Batch 3 QA — CLOSED 12/13 (1 not-testable, 0 blockers)
+- Full lifecycle verified in one continuous session: create→invite×3→
+  edit→search/filter→archive→revoke, all correct
+- Step 6 confirmed: failed submit doesn't lose form state (no unmount)
+- Step 12 (403 cross-role) verified against DB, not just status code
+- Step 13 (cross-tenant revoke) not testable — single tenant in dev DB.
+  TODO before pilot: seed a 2nd tenant, re-run this specific check
+  against DeviceService.revokeDevice's sameTenant path

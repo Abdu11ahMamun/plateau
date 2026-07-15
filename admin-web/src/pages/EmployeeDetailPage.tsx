@@ -11,6 +11,7 @@ import {
 } from '../api/employees';
 import { createContract, getContracts } from '../api/contracts';
 import { getAttendance } from '../api/attendance';
+import { revokeDevice } from '../api/devices';
 import type {
   AttendanceRow,
   Contract,
@@ -324,9 +325,44 @@ function PersonalInfoCard({ employee }: { employee: Employee }) {
 }
 
 function DeviceCard({ employee }: { employee: Employee }) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (deviceId: number) => revokeDevice(deviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('Device revoked');
+    },
+    onError: (err) => {
+      const detail = isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined;
+      toast.error(detail || 'Could not revoke device');
+    },
+  });
+
+  function handleRevoke() {
+    if (!employee.deviceId) return;
+    const confirmed = window.confirm(
+      'The employee will need to re-enroll on next login. Continue?'
+    );
+    if (!confirmed) return;
+    mutation.mutate(employee.deviceId);
+  }
+
   return (
     <Card title="Device">
       <DeviceStatusDisplay employee={employee} />
+      {employee.deviceStatus === 'ACTIVE' && (
+        <button
+          type="button"
+          onClick={handleRevoke}
+          disabled={mutation.isPending}
+          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-rouge/30 px-3 py-1.5 text-xs font-medium text-rouge-700 transition hover:bg-rouge-100 disabled:opacity-60"
+        >
+          {mutation.isPending ? 'Revoking…' : 'Revoke device'}
+        </button>
+      )}
     </Card>
   );
 }

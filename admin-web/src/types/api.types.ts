@@ -44,6 +44,7 @@ export interface Employee {
   role: 'OWNER' | 'MANAGER' | 'EMPLOYEE';
   status: 'INVITED' | 'ACTIVE' | 'ARCHIVED';
   deviceStatus: 'ACTIVE' | 'NONE';
+  deviceId: number | null;
   devicePlatform: string | null;
   enrolledAt: string | null; // ISO
   currentContract: Omit<Contract, 'endDate' | 'createdAt' | 'id'> | null;

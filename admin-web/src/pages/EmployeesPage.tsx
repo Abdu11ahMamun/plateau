@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
@@ -11,12 +11,14 @@ import {
 } from '../api/employees';
 import type { Employee, CreateEmployeeInput } from '../types/api.types';
 import { initials, shortDateLabel, joinedDateLabel, todayLabel } from '../lib/format';
+import { Select, Pill } from './AttendancePage';
 import {
   UsersIcon,
   DeviceIcon,
   PlusIcon,
   ArchiveIcon,
   MailIcon,
+  SearchIcon,
   XIcon,
   ChevronUpDownIcon,
 } from '../components/icons';
@@ -63,9 +65,17 @@ export function DeviceStatusDisplay({
   );
 }
 
+type RoleFilter = 'ALL' | Employee['role'];
+type StatusFilter = 'ALL' | Employee['status'];
+
 export default function EmployeesPage() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
+  // "ALL" here means "not archived" — archived employees only show once
+  // the user explicitly picks the Archived filter.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['employees'],
@@ -73,6 +83,32 @@ export default function EmployeesPage() {
   });
 
   const employees = data ?? [];
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return employees.filter((e) => {
+      if (
+        q &&
+        !e.name.toLowerCase().includes(q) &&
+        !e.email.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+      if (roleFilter !== 'ALL' && e.role !== roleFilter) return false;
+      if (statusFilter === 'ALL' && e.status === 'ARCHIVED') return false;
+      if (statusFilter !== 'ALL' && e.status !== statusFilter) return false;
+      return true;
+    });
+  }, [employees, search, roleFilter, statusFilter]);
+
+  const hasActiveFilters =
+    Boolean(search) || roleFilter !== 'ALL' || statusFilter !== 'ALL';
+
+  function clearFilters() {
+    setSearch('');
+    setRoleFilter('ALL');
+    setStatusFilter('ALL');
+  }
 
   const archive = useMutation({
     mutationFn: (id: number) => archiveEmployee(id),
@@ -107,7 +143,7 @@ export default function EmployeesPage() {
             <h1 className="text-2xl font-bold text-ink">Employees</h1>
             {!isLoading && (
               <span className="rounded-full bg-mist px-2.5 py-0.5 text-sm font-semibold text-slate-500">
-                {employees.length}
+                {filtered.length}
               </span>
             )}
           </div>
@@ -123,6 +159,69 @@ export default function EmployeesPage() {
           Add employee
         </button>
       </header>
+
+      {/* Filter bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-plateau-border bg-white p-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or email..."
+              className="w-full rounded-lg border border-plateau-border py-2 pl-9 pr-3 text-sm text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/40"
+            />
+          </div>
+
+          <Select
+            value={roleFilter}
+            onChange={(v) => setRoleFilter(v as RoleFilter)}
+            options={[
+              ['ALL', 'All roles'],
+              ['OWNER', 'Owner'],
+              ['MANAGER', 'Manager'],
+              ['EMPLOYEE', 'Employee'],
+            ]}
+          />
+          <Select
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+            options={[
+              ['ALL', 'All status'],
+              ['ACTIVE', 'Active'],
+              ['INVITED', 'Invited'],
+              ['ARCHIVED', 'Archived'],
+            ]}
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2">
+            {search && (
+              <Pill label={`“${search}”`} onClear={() => setSearch('')} />
+            )}
+            {roleFilter !== 'ALL' && (
+              <Pill
+                label={ROLE_STYLES[roleFilter].label}
+                onClear={() => setRoleFilter('ALL')}
+              />
+            )}
+            {statusFilter !== 'ALL' && (
+              <Pill
+                label={STATUS_STYLES[statusFilter].label}
+                onClear={() => setStatusFilter('ALL')}
+              />
+            )}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
 
       {isError && (
         <div className="rounded-lg border border-amber/40 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
@@ -153,8 +252,14 @@ export default function EmployeesPage() {
                     <EmptyState />
                   </td>
                 </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-0">
+                    <NoResultsState onClear={clearFilters} />
+                  </td>
+                </tr>
               ) : (
-                employees.map((e) => (
+                filtered.map((e) => (
                   <Row
                     key={e.id}
                     employee={e}
@@ -202,10 +307,14 @@ function Row({
   const status = STATUS_STYLES[employee.status];
   const isOwner = employee.role === 'OWNER';
 
+  const isArchived = employee.status === 'ARCHIVED';
+
   return (
     <tr
       onClick={() => navigate(`/employees/${employee.id}`)}
-      className="group h-14 cursor-pointer border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist/60"
+      className={`group h-14 cursor-pointer border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist/60 ${
+        isArchived ? 'opacity-60' : ''
+      }`}
     >
       {/* Employee */}
       <td className="px-5">
@@ -539,6 +648,25 @@ function EmptyState() {
       <p className="text-sm text-slate-400">
         Add your first employee to get started.
       </p>
+    </div>
+  );
+}
+
+function NoResultsState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+      <SearchIcon className="h-12 w-12 text-slate-200" />
+      <p className="mt-1 text-base font-semibold text-slate-600">
+        No employees found
+      </p>
+      <p className="text-sm text-slate-400">Try adjusting your filters.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-2 text-sm font-medium text-sage hover:text-sage-700"
+      >
+        Clear filters
+      </button>
     </div>
   );
 }

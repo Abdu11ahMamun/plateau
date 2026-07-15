@@ -250,6 +250,7 @@ public class EmployeeService {
                 employee.getRole().name(),
                 employee.getStatus().name(),
                 enrolled ? "ACTIVE" : "NONE",
+                enrolled ? activeDevice.getId() : null,
                 enrolled ? activeDevice.getPlatform() : null,
                 enrolled ? activeDevice.getEnrolledAt() : null,
                 currentContractView,

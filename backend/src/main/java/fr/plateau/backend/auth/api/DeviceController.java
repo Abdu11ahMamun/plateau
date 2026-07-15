@@ -41,7 +41,8 @@ public class DeviceController {
     public void revoke(@PathVariable Long deviceId) {
         Long callerUserId = SecurityUtils.getCurrentUserId();
         String callerRole = SecurityUtils.getCurrentRole();
-        deviceService.revokeDevice(deviceId, callerUserId, callerRole);
+        Long callerTenantId = SecurityUtils.getCurrentTenantId();
+        deviceService.revokeDevice(deviceId, callerUserId, callerRole, callerTenantId);
     }
 
     @GetMapping("/me")
