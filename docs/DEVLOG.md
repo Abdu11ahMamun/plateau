@@ -66,3 +66,11 @@
 - row.flagged (backend field) reused for chip count, not re-derived
 - Cross-verified chip counts against AttendancePage's own pagination footer
 - ?q= param wired for "View all in Attendance" deep-link
+
+## 2026-07-15 · Batch 2 QA — CLOSED 11/11
+- All checks pass, 0 blockers
+- Note (verification tooling, not product): QA's own script initially
+  misread attendance table columns due to responsive breakpoint shift
+  — self-caught, corrected, confirmed exact match on retest
+- Note: "View all in Attendance" link only shows when employee has
+  >10 sessions this month (RECENT_LIMIT=10) — expected by design
