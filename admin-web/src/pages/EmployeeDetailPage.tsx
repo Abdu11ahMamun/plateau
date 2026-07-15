@@ -1,21 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
 import { getEmployees } from '../api/employees';
 import { createContract, getContracts } from '../api/contracts';
-import type { Contract, CreateContractInput, Employee } from '../types/api.types';
+import { getAttendance } from '../api/attendance';
+import type {
+  AttendanceRow,
+  Contract,
+  CreateContractInput,
+  Employee,
+} from '../types/api.types';
 import {
   ROLE_STYLES,
   STATUS_STYLES,
   DeviceStatusDisplay,
+  ModalShell,
+  ModalBody,
+  ModalFooter,
   Field,
+  SelectInput,
   inputClass,
+  btnGhost,
+  btnPrimary,
 } from './EmployeesPage';
-import { initials, joinedDateLabel, contractDateLabel } from '../lib/format';
-import { PlusIcon, XIcon, ChevronRightIcon } from '../components/icons';
+import { MethodBadge } from './AttendancePage';
+import {
+  initials,
+  joinedDateLabel,
+  contractDateLabel,
+  attendanceDateLabel,
+  durationLabel,
+  totalHoursLabel,
+} from '../lib/format';
+import { PlusIcon, ChevronRightIcon } from '../components/icons';
 
 export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +68,7 @@ export default function EmployeeDetailPage() {
             <DeviceCard employee={employee} />
           </div>
           <ContractCard employee={employee} />
+          <ThisMonthCard employee={employee} />
         </>
       )}
     </div>
@@ -91,12 +112,12 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-plateau-border bg-white p-6">
+    <div className="rounded-xl border border-plateau-border bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         {action}
       </div>
-      <div className="mt-4 flex flex-col gap-4">{children}</div>
+      <div className="mt-5 flex flex-col gap-4">{children}</div>
     </div>
   );
 }
@@ -104,8 +125,10 @@ function Card({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm text-ink">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm text-ink">{value}</p>
     </div>
   );
 }
@@ -189,17 +212,18 @@ function ContractCard({ employee }: { employee: Employee }) {
       }
     >
       {current ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <TypeBadge type={current.type} />
-          <span className="text-sm text-ink">
-            {current.weeklyMinutes / 60}h/week
-          </span>
-          <span className="text-sm text-ink">
-            {wageLabel(current.hourlyWageCents)}
-          </span>
-          <span className="text-sm text-slate-400">
-            since {contractDateLabel(current.startDate)}
-          </span>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Type
+            </p>
+            <p className="mt-1.5">
+              <TypeBadge type={current.type} />
+            </p>
+          </div>
+          <InfoRow label="Hours" value={`${current.weeklyMinutes / 60}h/week`} />
+          <InfoRow label="Hourly wage" value={wageLabel(current.hourlyWageCents)} />
+          <InfoRow label="Since" value={contractDateLabel(current.startDate)} />
         </div>
       ) : (
         <p className="text-sm text-slate-400">No contract yet</p>
@@ -243,11 +267,17 @@ function ContractCard({ employee }: { employee: Employee }) {
 
 function HistoryRow({ contract }: { contract: Contract }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 py-3 text-sm">
-      <TypeBadge type={contract.type} />
-      <span className="text-ink">{contract.weeklyMinutes / 60}h/week</span>
-      <span className="text-ink">{wageLabel(contract.hourlyWageCents)}</span>
-      <span className="text-slate-500">
+    <div className="grid grid-cols-[3.5rem_6rem_6rem_1fr] items-center gap-3 py-3 text-sm">
+      <span className="justify-self-start">
+        <TypeBadge type={contract.type} />
+      </span>
+      <span className="tabular-nums text-ink">
+        {contract.weeklyMinutes / 60}h/week
+      </span>
+      <span className="tabular-nums text-ink">
+        {wageLabel(contract.hourlyWageCents)}
+      </span>
+      <span className="tabular-nums text-slate-500">
         {contractDateLabel(contract.startDate)} →{' '}
         {contract.endDate ? (
           contractDateLabel(contract.endDate)
@@ -269,7 +299,161 @@ function HistorySkeleton() {
   );
 }
 
+// ── This month (punch history) ──────────────────────────────────────────
+
+const RECENT_LIMIT = 10;
+
+function Chip({
+  tone = 'slate',
+  children,
+}: {
+  tone?: 'slate' | 'amber';
+  children: React.ReactNode;
+}) {
+  const styles =
+    tone === 'amber'
+      ? 'bg-amber-100 text-amber-700'
+      : 'bg-slate-100 text-slate-600';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${styles}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Newest first: by date desc, then by clock-in desc within the same day. */
+function compareRecent(a: AttendanceRow, b: AttendanceRow): number {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+  return (b.clockIn ?? '').localeCompare(a.clockIn ?? '');
+}
+
+function ThisMonthCard({ employee }: { employee: Employee }) {
+  const currentMonth = format(new Date(), 'yyyy-MM');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['attendance', currentMonth],
+    queryFn: () => getAttendance(currentMonth),
+  });
+
+  const rows = useMemo(
+    () => (data ?? []).filter((r) => r.userId === employee.id),
+    [data, employee.id]
+  );
+  const sorted = useMemo(() => [...rows].sort(compareRecent), [rows]);
+  const visibleRows = sorted.slice(0, RECENT_LIMIT);
+  const hasMore = sorted.length > RECENT_LIMIT;
+
+  const totalMinutes = rows.reduce((s, r) => s + (r.durationMinutes ?? 0), 0);
+  const flaggedCount = rows.filter((r) => r.flagged).length;
+
+  return (
+    <Card title="This month">
+      {isLoading ? (
+        <ThisMonthSkeleton />
+      ) : rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-400">
+          No sessions this month
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip>{rows.length} sessions</Chip>
+            <Chip>{totalHoursLabel(totalMinutes)} total</Chip>
+            <Chip tone={flaggedCount > 0 ? 'amber' : 'slate'}>
+              {flaggedCount} flagged
+            </Chip>
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-plateau-border">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-plateau-border bg-mist/60 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-2.5 font-semibold">Date</th>
+                  <th className="px-4 py-2.5 font-semibold">Clock in</th>
+                  <th className="px-4 py-2.5 font-semibold">Clock out</th>
+                  <th className="px-4 py-2.5 font-semibold">Duration</th>
+                  <th className="px-4 py-2.5 font-semibold">Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRows.map((row, i) => (
+                  <tr
+                    key={`${row.date}-${i}`}
+                    className="h-12 border-b border-plateau-border/60 last:border-0"
+                  >
+                    <td className="whitespace-nowrap px-4 text-sm font-medium text-ink">
+                      {attendanceDateLabel(row.date)}
+                    </td>
+                    <td className="px-4 font-mono text-sm text-ink">
+                      {row.clockIn ?? '—'}
+                    </td>
+                    <td className="px-4 font-mono text-sm">
+                      {row.clockOut ? (
+                        <span className="text-ink">{row.clockOut}</span>
+                      ) : (
+                        <span className="italic text-sage">Still in</span>
+                      )}
+                    </td>
+                    <td className="px-4 text-sm text-slate-600">
+                      {durationLabel(row.durationMinutes)}
+                    </td>
+                    <td className="px-4">
+                      <MethodBadge method={row.method} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {hasMore && (
+            <Link
+              to={`/attendance?q=${encodeURIComponent(employee.name)}`}
+              className="w-fit text-sm font-medium text-sage transition hover:text-sage-700"
+            >
+              View all in Attendance →
+            </Link>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+function ThisMonthSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        <div className="h-6 w-24 animate-pulse rounded-full bg-mist" />
+        <div className="h-6 w-28 animate-pulse rounded-full bg-mist" />
+        <div className="h-6 w-20 animate-pulse rounded-full bg-mist" />
+      </div>
+      <div className="h-40 animate-pulse rounded-lg border border-plateau-border bg-mist" />
+    </div>
+  );
+}
+
 // ── Add contract modal ──────────────────────────────────────────────────
+
+/** Text input with a quiet unit suffix (€, h) pinned inside the right edge. */
+function UnitInput({
+  unit,
+  ...props
+}: { unit: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <span className="relative block">
+      <input
+        {...props}
+        className={`${inputClass} pr-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+        {unit}
+      </span>
+    </span>
+  );
+}
 
 function AddContractModal({
   employeeId,
@@ -327,60 +511,48 @@ function AddContractModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-      onMouseDown={onClose}
+    <ModalShell
+      title="Add contract"
+      description="Starting a new contract closes the previous one automatically."
+      onClose={onClose}
     >
-      <div
-        className="w-full max-w-md rounded-2xl bg-white shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-plateau-border px-6 py-4">
-          <h2 className="text-lg font-bold text-ink">Add contract</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-mist hover:text-ink"
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-5">
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
           <Field label="Type">
-            <select
+            <SelectInput
               value={type}
               onChange={(e) => setType(e.target.value as Contract['type'])}
-              className={`${inputClass} cursor-pointer`}
             >
               <option value="CDI">CDI</option>
               <option value="CDD">CDD</option>
               <option value="EXTRA">Extra</option>
-            </select>
+            </SelectInput>
           </Field>
-          <Field label="Hours per week" required>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={hoursPerWeek}
-              onChange={(e) => setHoursPerWeek(e.target.value)}
-              placeholder="20"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Hourly wage (€)" required>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={hourlyWage}
-              onChange={(e) => setHourlyWage(e.target.value)}
-              placeholder="12.31"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Start date" required>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Hours per week">
+              <UnitInput
+                unit="h"
+                type="number"
+                min="1"
+                step="1"
+                value={hoursPerWeek}
+                onChange={(e) => setHoursPerWeek(e.target.value)}
+                placeholder="20"
+              />
+            </Field>
+            <Field label="Hourly wage">
+              <UnitInput
+                unit="€"
+                type="number"
+                min="0"
+                step="0.01"
+                value={hourlyWage}
+                onChange={(e) => setHourlyWage(e.target.value)}
+                placeholder="12.31"
+              />
+            </Field>
+          </div>
+          <Field label="Start date">
             <input
               type="date"
               value={startDate}
@@ -390,30 +562,26 @@ function AddContractModal({
           </Field>
 
           {error && (
-            <p className="rounded-lg bg-rouge-100 px-3 py-2 text-sm font-medium text-rouge-700">
+            <p className="rounded-lg border border-rouge/20 bg-rouge-100/60 px-3 py-2 text-sm font-medium text-rouge-700">
               {error}
             </p>
           )}
+        </ModalBody>
 
-          <div className="mt-1 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition hover:bg-mist"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60"
-            >
-              {mutation.isPending ? 'Saving…' : 'Add contract'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <button type="button" onClick={onClose} className={btnGhost}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className={btnPrimary}
+          >
+            {mutation.isPending ? 'Saving…' : 'Add contract'}
+          </button>
+        </ModalFooter>
+      </form>
+    </ModalShell>
   );
 }
 
@@ -447,6 +615,7 @@ function DetailSkeleton() {
         <div className="h-40 animate-pulse rounded-xl border border-plateau-border bg-mist" />
       </div>
       <div className="h-32 animate-pulse rounded-xl border border-plateau-border bg-mist" />
+      <div className="h-48 animate-pulse rounded-xl border border-plateau-border bg-mist" />
     </>
   );
 }

@@ -48,3 +48,21 @@
 - Employee.currentContract synced with backend's CurrentContractView
 - createContract() returns {contract, warnings} wrapped
 - getContracts() returns plain Contract[] — asymmetry preserved correctly
+
+
+## 2026-07-15 · Batch 2 T7: Contract card + Add Contract modal
+- Full-width contract card, lazy-loaded History (fetch on first expand)
+- Hours→minutes (×60), euros→cents (×100+round) conversion at submit
+- Dual toast verified: success + SMIC warning show together, don't suppress
+- Reused Field/inputClass/ROLE_STYLES/DeviceStatusDisplay — no duplication
+- Note: "Add contract" button text collision (trigger vs submit) — 
+  disambiguate by type attr if writing tests later
+
+
+
+  ## 2026-07-15 · Batch 2 T8: This-month punch summary — DONE
+- Reused getAttendance() + shared query key with AttendancePage (cache hit)
+- MethodBadge extracted, single source of truth for badge rendering
+- row.flagged (backend field) reused for chip count, not re-derived
+- Cross-verified chip counts against AttendancePage's own pagination footer
+- ?q= param wired for "View all in Attendance" deep-link

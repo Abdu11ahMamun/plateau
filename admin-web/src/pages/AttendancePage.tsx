@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { getAttendance } from '../api/attendance';
 import type { AttendanceRow } from '../types/api.types';
@@ -31,15 +32,29 @@ type SortKey = 'date' | 'clockIn' | 'duration';
 type SortDir = 'asc' | 'desc';
 type Sort = { key: SortKey; dir: SortDir };
 
-const METHOD_STYLES: Record<string, { bg: string; label: string }> = {
+// Exported so EmployeeDetailPage's "This month" table uses the identical badge.
+export const METHOD_STYLES: Record<string, { bg: string; label: string }> = {
   NFC: { bg: 'bg-sage-100 text-sage-700', label: 'NFC' },
   MANUAL: { bg: 'bg-amber-100 text-amber-700', label: 'Manual' },
   ADMIN: { bg: 'bg-slate-100 text-slate-600', label: 'Admin' },
 };
 
+export function MethodBadge({ method }: { method: string }) {
+  const style = METHOD_STYLES[method] ?? {
+    bg: 'bg-slate-100 text-slate-600',
+    label: method,
+  };
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg}`}>
+      {style.label}
+    </span>
+  );
+}
+
 export default function AttendancePage() {
+  const [searchParams] = useSearchParams();
   const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'));
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [method, setMethod] = useState('ALL');
   const [status, setStatus] = useState('ALL');
   const [flaggedOnly, setFlaggedOnly] = useState(false);
@@ -236,11 +251,11 @@ export default function AttendancePage() {
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-plateau-border bg-white">
+      <div className="overflow-hidden rounded-xl border border-plateau-border bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left md:min-w-[640px]">
             <thead>
-              <tr className="border-b border-plateau-border bg-mist text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-plateau-border bg-mist/60 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 <SortableTh
                   label="Date"
                   active={sort.key === 'date'}
@@ -523,11 +538,6 @@ function SortableTh({
 }
 
 function Row({ row }: { row: AttendanceRow }) {
-  const method = METHOD_STYLES[row.method] ?? {
-    bg: 'bg-slate-100 text-slate-600',
-    label: row.method,
-  };
-
   return (
     <tr
       className={`h-14 border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist ${
@@ -539,7 +549,7 @@ function Row({ row }: { row: AttendanceRow }) {
       </td>
       <td className="px-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage text-xs font-bold text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-sage-700">
             {initials(row.name)}
           </span>
           <span className="truncate text-sm font-medium text-ink">
@@ -565,11 +575,7 @@ function Row({ row }: { row: AttendanceRow }) {
         {durationLabel(row.durationMinutes)}
       </td>
       <td className="hidden px-5 md:table-cell">
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${method.bg}`}
-        >
-          {method.label}
-        </span>
+        <MethodBadge method={row.method} />
       </td>
       <td className="hidden px-5 md:table-cell">
         <StatusCell status={row.status} />

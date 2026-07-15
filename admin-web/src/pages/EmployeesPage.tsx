@@ -16,6 +16,7 @@ import {
   PlusIcon,
   ArchiveIcon,
   XIcon,
+  ChevronUpDownIcon,
 } from '../components/icons';
 
 // Exported so EmployeeDetailPage can render identical badges/status.
@@ -99,7 +100,7 @@ export default function EmployeesPage() {
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sage-600"
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-sage px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sage-600"
         >
           <PlusIcon className="h-4 w-4" />
           Add employee
@@ -113,11 +114,11 @@ export default function EmployeesPage() {
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-plateau-border bg-white">
+      <div className="overflow-hidden rounded-xl border border-plateau-border bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left md:min-w-[720px]">
             <thead>
-              <tr className="border-b border-plateau-border bg-mist text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-plateau-border bg-mist/60 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 <Th className="min-w-[200px]">Employee</Th>
                 <Th className="w-[120px]">Role</Th>
                 <Th className="w-[140px]">Status</Th>
@@ -181,16 +182,16 @@ function Row({
   return (
     <tr
       onClick={() => navigate(`/employees/${employee.id}`)}
-      className="group h-16 cursor-pointer border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist"
+      className="group h-14 cursor-pointer border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist/60"
     >
       {/* Employee */}
       <td className="px-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage text-xs font-bold text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-sage-700">
             {initials(employee.name)}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">
+            <p className="truncate text-sm font-medium text-ink">
               {employee.name}
             </p>
             <p className="truncate text-xs text-slate-400">{employee.email}</p>
@@ -221,7 +222,7 @@ function Row({
       </td>
 
       {/* Joined */}
-      <td className="px-5 text-sm text-slate-400">
+      <td className="px-5 text-sm tabular-nums text-slate-500">
         {joinedDateLabel(employee.createdAt)}
       </td>
 
@@ -243,6 +244,113 @@ function Row({
         )}
       </td>
     </tr>
+  );
+}
+
+// ── Modal system (shared with EmployeeDetailPage) ─────────────────────────
+
+export function ModalShell({
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  title: string;
+  description?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[2px]"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-ink/5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
+          <div>
+            <h2 className="text-base font-semibold text-ink">{title}</h2>
+            {description && (
+              <p className="mt-0.5 text-sm text-slate-400">{description}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-mist hover:text-ink"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function ModalBody({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-plateau-border/70 px-6 py-5">
+      {children}
+    </div>
+  );
+}
+
+export function ModalFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-end gap-2 border-t border-plateau-border/70 bg-mist/40 px-6 py-4">
+      {children}
+    </div>
+  );
+}
+
+export const btnGhost =
+  'h-10 rounded-lg border border-plateau-border bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-mist';
+
+export const btnPrimary =
+  'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sage px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60';
+
+export const inputClass =
+  'h-10 w-full rounded-lg border border-plateau-border bg-white px-3 text-sm text-ink placeholder:text-slate-300 outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25';
+
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="flex items-baseline justify-between">
+        <span className="text-[13px] font-medium text-slate-600">{label}</span>
+        {hint && <span className="text-xs text-slate-400">{hint}</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+/** Native select dressed to match inputs, with a quiet custom chevron. */
+export function SelectInput({
+  className = '',
+  children,
+  ...rest
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <span className="relative block">
+      <select
+        {...rest}
+        className={`${inputClass} cursor-pointer appearance-none pr-9 ${className}`}
+      >
+        {children}
+      </select>
+      <ChevronUpDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    </span>
   );
 }
 
@@ -297,27 +405,14 @@ function AddEmployeeModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-      onMouseDown={onClose}
+    <ModalShell
+      title="Add employee"
+      description="An invitation will be sent by email."
+      onClose={onClose}
     >
-      <div
-        className="w-full max-w-md rounded-2xl bg-white shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-plateau-border px-6 py-4">
-          <h2 className="text-lg font-bold text-ink">Add employee</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-mist hover:text-ink"
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-5">
-          <Field label="Name" required>
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <Field label="Name">
             <input
               autoFocus
               value={name}
@@ -326,7 +421,7 @@ function AddEmployeeModal({
               className={inputClass}
             />
           </Field>
-          <Field label="Email" required>
+          <Field label="Email">
             <input
               type="email"
               value={email}
@@ -335,79 +430,49 @@ function AddEmployeeModal({
               className={inputClass}
             />
           </Field>
-          <Field label="Phone" hint="optional">
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+33 6 12 34 56 78"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Role">
-            <select
-              value={role}
-              onChange={(e) =>
-                setRole(e.target.value as 'EMPLOYEE' | 'MANAGER')
-              }
-              className={`${inputClass} cursor-pointer`}
-            >
-              <option value="EMPLOYEE">Employee</option>
-              <option value="MANAGER">Manager</option>
-            </select>
-          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Phone" hint="Optional">
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+33 6 12 34 56 78"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Role">
+              <SelectInput
+                value={role}
+                onChange={(e) =>
+                  setRole(e.target.value as 'EMPLOYEE' | 'MANAGER')
+                }
+              >
+                <option value="EMPLOYEE">Employee</option>
+                <option value="MANAGER">Manager</option>
+              </SelectInput>
+            </Field>
+          </div>
 
           {error && (
-            <p className="rounded-lg bg-rouge-100 px-3 py-2 text-sm font-medium text-rouge-700">
+            <p className="rounded-lg border border-rouge/20 bg-rouge-100/60 px-3 py-2 text-sm font-medium text-rouge-700">
               {error}
             </p>
           )}
+        </ModalBody>
 
-          <div className="mt-1 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition hover:bg-mist"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60"
-            >
-              {mutation.isPending ? 'Sending…' : 'Send invite'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Exported so other modals (e.g. Add Contract) match this exact styling.
-export const inputClass =
-  'w-full rounded-lg border border-plateau-border px-3 py-2 text-sm text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/40';
-
-export function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-ink">
-        {label}
-        {required && <span className="text-rouge"> *</span>}
-        {hint && <span className="ml-1 text-xs text-slate-400">({hint})</span>}
-      </span>
-      {children}
-    </label>
+        <ModalFooter>
+          <button type="button" onClick={onClose} className={btnGhost}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className={btnPrimary}
+          >
+            {mutation.isPending ? 'Sending…' : 'Send invite'}
+          </button>
+        </ModalFooter>
+      </form>
+    </ModalShell>
   );
 }
 
@@ -420,7 +485,9 @@ function Th({
   children?: React.ReactNode;
   className?: string;
 }) {
-  return <th className={`px-5 py-3 font-semibold ${className}`}>{children}</th>;
+  return (
+    <th className={`px-5 py-2.5 font-semibold ${className}`}>{children}</th>
+  );
 }
 
 function EmptyState() {
@@ -441,7 +508,7 @@ function SkeletonRows() {
   return (
     <>
       {Array.from({ length: 4 }).map((_, i) => (
-        <tr key={i} className="h-16 border-b border-plateau-border/60">
+        <tr key={i} className="h-14 border-b border-plateau-border/60">
           <td colSpan={6} className="px-5">
             <div className="h-6 animate-pulse rounded bg-mist" />
           </td>
