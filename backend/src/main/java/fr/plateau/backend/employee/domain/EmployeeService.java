@@ -16,6 +16,8 @@ import fr.plateau.backend.auth.data.DeviceRepository;
 import fr.plateau.backend.auth.domain.DeviceStatus;
 import fr.plateau.backend.common.ConflictException;
 import fr.plateau.backend.common.NotFoundException;
+import fr.plateau.backend.common.SecurityUtils;
+import fr.plateau.backend.common.UnprocessableEntityException;
 import fr.plateau.backend.employee.api.EmployeeView;
 import fr.plateau.backend.employee.data.Contract;
 import fr.plateau.backend.employee.data.Employee;
@@ -120,6 +122,94 @@ public class EmployeeService {
                     "An employee with this phone or email already exists"
             );
         }
+    }
+
+    @Transactional
+    public EmployeeView updateEmployee(
+            Long id,
+            Long tenantId,
+            String name,
+            String email,
+            Role role
+    ) {
+        Employee employee = employeeRepository.findById(id)
+                .filter(e -> tenantId.equals(e.getTenantId()))
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                "Employee " + id + " not found"
+                        )
+                );
+
+        if (role != null && employee.getRole() == Role.OWNER && role != Role.OWNER) {
+            long activeOwners = employeeRepository.findAllByTenantId(tenantId).stream()
+                    .filter(e -> e.getRole() == Role.OWNER && e.getStatus() == EmployeeStatus.ACTIVE)
+                    .count();
+
+            if (activeOwners <= 1) {
+                throw new UnprocessableEntityException(
+                        "Tenant must keep at least one owner"
+                );
+            }
+        }
+
+        if (name != null) {
+            employee.setName(name);
+        }
+        if (email != null) {
+            employee.setEmail(email);
+        }
+        if (role != null) {
+            employee.setRole(role);
+        }
+
+        try {
+            Employee saved = employeeRepository.saveAndFlush(employee);
+
+            log.info(
+                    "EMPLOYEE UPDATED id={} tenantId={} by={}",
+                    saved.getId(),
+                    tenantId,
+                    SecurityUtils.getCurrentUserId()
+            );
+
+            Device activeDevice = deviceRepository
+                    .findByUserIdAndStatus(saved.getId(), DeviceStatus.ACTIVE)
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+
+            Contract currentContract = contractService
+                    .getCurrentContract(saved.getId(), tenantId)
+                    .orElse(null);
+
+            return toView(saved, activeDevice, currentContract);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException(
+                    "An employee with this phone or email already exists"
+            );
+        }
+    }
+
+    @Transactional
+    public void resendInvite(Long id, Long tenantId) {
+        Employee employee = employeeRepository.findById(id)
+                .filter(e -> tenantId.equals(e.getTenantId()))
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                "Employee " + id + " not found"
+                        )
+                );
+
+        if (employee.getStatus() != EmployeeStatus.INVITED) {
+            throw new ConflictException("Employee has already joined");
+        }
+
+        log.info(
+                "=== PLATEAU INVITE === To: {} Name: {} Role: {} ===",
+                employee.getEmail(),
+                employee.getName(),
+                employee.getRole()
+        );
     }
 
     @Transactional

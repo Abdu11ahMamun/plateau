@@ -4,7 +4,11 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
-import { getEmployees } from '../api/employees';
+import {
+  getEmployees,
+  updateEmployee,
+  resendInvite,
+} from '../api/employees';
 import { createContract, getContracts } from '../api/contracts';
 import { getAttendance } from '../api/attendance';
 import type {
@@ -12,6 +16,7 @@ import type {
   Contract,
   CreateContractInput,
   Employee,
+  UpdateEmployeeInput,
 } from '../types/api.types';
 import {
   ROLE_STYLES,
@@ -35,7 +40,12 @@ import {
   durationLabel,
   totalHoursLabel,
 } from '../lib/format';
-import { PlusIcon, ChevronRightIcon } from '../components/icons';
+import {
+  PlusIcon,
+  ChevronRightIcon,
+  EditIcon,
+  MailIcon,
+} from '../components/icons';
 
 export default function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +73,9 @@ export default function EmployeeDetailPage() {
       ) : (
         <>
           <Header employee={employee} />
+          {employee.status === 'INVITED' && (
+            <InviteBanner employee={employee} />
+          )}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <PersonalInfoCard employee={employee} />
             <DeviceCard employee={employee} />
@@ -76,29 +89,196 @@ export default function EmployeeDetailPage() {
 }
 
 function Header({ employee }: { employee: Employee }) {
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
   const role = ROLE_STYLES[employee.role];
   const status = STATUS_STYLES[employee.status];
 
   return (
-    <div className="flex items-center gap-4">
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sage-100 text-lg font-semibold text-sage-700">
-        {initials(employee.name)}
-      </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold text-ink">{employee.name}</h1>
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${role.bg}`}
-          >
-            {role.label}
-          </span>
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sage-100 text-lg font-semibold text-sage-700">
+          {initials(employee.name)}
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold text-ink">{employee.name}</h1>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${role.bg}`}
+            >
+              {role.label}
+            </span>
+          </div>
+          <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+            <span className={`h-2 w-2 rounded-full ${status.dot}`} />
+            {status.label}
+          </p>
         </div>
-        <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-          <span className={`h-2 w-2 rounded-full ${status.dot}`} />
-          {status.label}
-        </p>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setEditOpen(true)}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-plateau-border bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-mist hover:text-ink"
+      >
+        <EditIcon className="h-3.5 w-3.5" />
+        Edit
+      </button>
+
+      {editOpen && (
+        <EditEmployeeModal
+          employee={employee}
+          onClose={() => setEditOpen(false)}
+          onUpdated={() =>
+            queryClient.invalidateQueries({ queryKey: ['employees'] })
+          }
+        />
+      )}
     </div>
+  );
+}
+
+function InviteBanner({ employee }: { employee: Employee }) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: () => resendInvite(employee.id),
+    onSuccess: () => {
+      toast.success(`Invite re-sent to ${employee.email}`);
+    },
+    onError: (err) => {
+      if (isAxiosError(err) && err.response?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        toast.error(`${employee.name} has already joined`);
+      } else {
+        toast.error('Could not resend invite');
+      }
+    },
+  });
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber-50 px-5 py-3.5">
+      <p className="text-sm font-medium text-amber-700">
+        Invite sent — not yet joined
+      </p>
+      <button
+        type="button"
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-sage px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60"
+      >
+        <MailIcon className="h-3.5 w-3.5" />
+        {mutation.isPending ? 'Sending…' : 'Resend invite'}
+      </button>
+    </div>
+  );
+}
+
+function EditEmployeeModal({
+  employee,
+  onClose,
+  onUpdated,
+}: {
+  employee: Employee;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const [name, setName] = useState(employee.name);
+  const [email, setEmail] = useState(employee.email);
+  const [role, setRole] = useState<Employee['role']>(employee.role);
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (input: UpdateEmployeeInput) =>
+      updateEmployee(employee.id, input),
+    onSuccess: () => {
+      onUpdated();
+      onClose();
+      toast.success('Employee updated');
+    },
+    onError: (err) => {
+      const detail = isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined;
+      setError(detail || 'Something went wrong — try again.');
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedName || !trimmedEmail) {
+      setError('Name and email are required.');
+      return;
+    }
+
+    // Partial update — only send what actually changed.
+    const input: UpdateEmployeeInput = {};
+    if (trimmedName !== employee.name) input.name = trimmedName;
+    if (trimmedEmail !== employee.email) input.email = trimmedEmail;
+    if (role !== employee.role) input.role = role;
+
+    if (Object.keys(input).length === 0) {
+      onClose();
+      return;
+    }
+    mutation.mutate(input);
+  }
+
+  return (
+    <ModalShell title="Edit employee" onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <Field label="Name">
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Email">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Role">
+            <SelectInput
+              value={role}
+              onChange={(e) => setRole(e.target.value as Employee['role'])}
+            >
+              <option value="OWNER">Owner</option>
+              <option value="MANAGER">Manager</option>
+              <option value="EMPLOYEE">Employee</option>
+            </SelectInput>
+          </Field>
+
+          {error && (
+            <p className="rounded-lg border border-rouge/20 bg-rouge-100/60 px-3 py-2 text-sm font-medium text-rouge-700">
+              {error}
+            </p>
+          )}
+        </ModalBody>
+
+        <ModalFooter>
+          <button type="button" onClick={onClose} className={btnGhost}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className={btnPrimary}
+          >
+            {mutation.isPending ? 'Saving…' : 'Save changes'}
+          </button>
+        </ModalFooter>
+      </form>
+    </ModalShell>
   );
 }
 

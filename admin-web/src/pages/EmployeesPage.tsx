@@ -7,6 +7,7 @@ import {
   getEmployees,
   createEmployee,
   archiveEmployee,
+  resendInvite,
 } from '../api/employees';
 import type { Employee, CreateEmployeeInput } from '../types/api.types';
 import { initials, shortDateLabel, joinedDateLabel, todayLabel } from '../lib/format';
@@ -15,6 +16,7 @@ import {
   DeviceIcon,
   PlusIcon,
   ArchiveIcon,
+  MailIcon,
   XIcon,
   ChevronUpDownIcon,
 } from '../components/icons';
@@ -81,6 +83,21 @@ export default function EmployeesPage() {
     onError: () => toast.error('Could not archive employee'),
   });
 
+  const resend = useMutation({
+    mutationFn: (employee: Employee) => resendInvite(employee.id),
+    onSuccess: (_data, employee) => {
+      toast.success(`Invite re-sent to ${employee.email}`);
+    },
+    onError: (err, employee) => {
+      if (isAxiosError(err) && err.response?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        toast.error(`${employee.name} has already joined`);
+      } else {
+        toast.error('Could not resend invite');
+      }
+    },
+  });
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -143,6 +160,8 @@ export default function EmployeesPage() {
                     employee={e}
                     onArchive={() => archive.mutate(e.id)}
                     archiving={archive.isPending && archive.variables === e.id}
+                    onResend={() => resend.mutate(e)}
+                    resending={resend.isPending && resend.variables?.id === e.id}
                   />
                 ))
               )}
@@ -169,10 +188,14 @@ function Row({
   employee,
   onArchive,
   archiving,
+  onResend,
+  resending,
 }: {
   employee: Employee;
   onArchive: () => void;
   archiving: boolean;
+  onResend: () => void;
+  resending: boolean;
 }) {
   const navigate = useNavigate();
   const role = ROLE_STYLES[employee.role];
@@ -228,20 +251,36 @@ function Row({
 
       {/* Actions */}
       <td className="px-5 text-right">
-        {!isOwner && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onArchive();
-            }}
-            disabled={archiving}
-            title="Archive employee"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-rouge-100 hover:text-rouge-700 focus:opacity-100 group-hover:opacity-100 disabled:opacity-50"
-          >
-            <ArchiveIcon className="h-4 w-4" />
-          </button>
-        )}
+        <div className="flex items-center justify-end gap-1">
+          {employee.status === 'INVITED' && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResend();
+              }}
+              disabled={resending}
+              title="Resend invite"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-sage-100 hover:text-sage-700 focus:opacity-100 group-hover:opacity-100 disabled:opacity-50"
+            >
+              <MailIcon className="h-4 w-4" />
+            </button>
+          )}
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArchive();
+              }}
+              disabled={archiving}
+              title="Archive employee"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-rouge-100 hover:text-rouge-700 focus:opacity-100 group-hover:opacity-100 disabled:opacity-50"
+            >
+              <ArchiveIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

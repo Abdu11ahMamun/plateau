@@ -57,6 +57,12 @@ export interface CreateEmployeeInput {
   role: 'EMPLOYEE' | 'MANAGER';
 }
 
+export interface UpdateEmployeeInput {
+  name?: string;
+  email?: string;
+  role?: Employee['role'];
+}
+
 export interface AuthUser {
   id: number;
   name: string;
