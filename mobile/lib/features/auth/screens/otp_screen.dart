@@ -59,7 +59,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (code.length != _codeLength) return;
     FocusScope.of(context).unfocus();
     // On success the auth status flips to authenticated and the router
-    // redirect carries us to /home — no manual navigation needed here.
+    // redirect carries us to /home (or /join for an INVITED employee, per
+    // AuthState.needsJoin) — no manual navigation needed here.
     await ref.read(authControllerProvider.notifier).verifyOtp(code);
   }
 

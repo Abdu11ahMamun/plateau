@@ -9,6 +9,29 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/utils/uuid.dart';
 
+/// The caller's tenant and their own invite status, from GET /api/me/tenant.
+class TenantInfo {
+  const TenantInfo({
+    required this.tenantName,
+    required this.employeeName,
+    required this.status,
+  });
+
+  final String tenantName;
+  final String employeeName;
+  final String status; // INVITED | ACTIVE
+
+  bool get isInvited => status == 'INVITED';
+
+  factory TenantInfo.fromJson(Map<String, dynamic> json) {
+    return TenantInfo(
+      tenantName: json['tenantName'] as String,
+      employeeName: json['employeeName'] as String,
+      status: json['status'] as String,
+    );
+  }
+}
+
 /// Result of a successful OTP verification.
 class AuthResult {
   const AuthResult({
@@ -55,34 +78,55 @@ class AuthRepository {
     );
   }
 
+  /// GET /api/me/tenant (requires JWT) — the caller's tenant and their own
+  /// invite status. Checked right after OTP verify to decide /join vs /home.
+  Future<TenantInfo> getMyTenant() async {
+    final res = await _dio.get('/api/me/tenant');
+    return TenantInfo.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// POST /api/invite/accept (requires JWT) — accepts a pending invite and
+  /// enrolls the device in the same call (backend flips INVITED → ACTIVE
+  /// and creates the device row together), so no separate [enrollDevice]
+  /// call is needed after this succeeds.
+  Future<void> acceptInvite() async {
+    final payload = await _enrollmentPayload();
+    await _dio.post('/api/invite/accept', data: payload);
+  }
+
   /// POST /api/devices/enroll (requires JWT). Prototype: sends a fake public
   /// key — real P-256 Keystore enrollment lands in a later milestone.
   /// A 409 means this user already has an active device, which we treat as
   /// success (the enrollment gate is satisfied).
   Future<void> enrollDevice() async {
+    final payload = await _enrollmentPayload();
+    try {
+      await _dio.post('/api/devices/enroll', data: payload);
+      debugPrint('📱 DEVICE ENROLLED — installId: ${payload['installId']}');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        debugPrint(
+          '📱 DEVICE ENROLLED (already) — installId: ${payload['installId']}',
+        );
+        return; // already enrolled — gate satisfied
+      }
+      rethrow;
+    }
+  }
+
+  /// Shared by [enrollDevice] and [acceptInvite] — both hit an endpoint
+  /// that expects the same {installId, publicKey, platform} shape.
+  Future<Map<String, dynamic>> _enrollmentPayload() async {
     var installId = await _storage.readInstallId();
     if (installId == null) {
       installId = generateUuidV4();
       await _storage.writeInstallId(installId);
     }
-
-    try {
-      await _dio.post(
-        '/api/devices/enroll',
-        data: {
-          'installId': installId,
-          'publicKey': _fakePublicKey(),
-          'platform': 'ANDROID',
-        },
-      );
-      debugPrint('📱 DEVICE ENROLLED — installId: $installId');
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 409) {
-        debugPrint('📱 DEVICE ENROLLED (already) — installId: $installId');
-        return; // already enrolled — gate satisfied
-      }
-      rethrow;
-    }
+    return {
+      'installId': installId,
+      'publicKey': _fakePublicKey(),
+      'platform': 'ANDROID',
+    };
   }
 
   static String _fakePublicKey() {

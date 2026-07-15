@@ -113,3 +113,37 @@
 - Step 13 (cross-tenant revoke) not testable — single tenant in dev DB.
   TODO before pilot: seed a 2nd tenant, re-run this specific check
   against DeviceService.revokeDevice's sameTenant path
+
+
+  ## 2026-07-15 · Batch 4 T13: /api/me/hours + /api/me/contract — DONE
+- /api/me/hours already existed (MeHoursController, undocumented) — verified
+  matches spec, left untouched
+- /api/me/contract added, reuses ContractService + EmployeeView's
+  CurrentContractView DTO (no duplicate shape)
+- Isolation verified numerically: admin shows 19/11/1 (Karim/Lea/Abdullah),
+  Lea's own endpoint returns exactly her 11 — zero leakage
+
+  ## 2026-07-15 · Batch 4 T15: /api/me/tenant + /api/invite/accept — DONE
+- 🐛 Task premise was wrong: assumed enroll idempotency was already
+  fixed (it wasn't — checked devlog, found no record, verified
+  empirically: same installId 2nd call returned 409, not 200)
+- Fixed in DeviceService.enrollDevice: short-circuit returns existing
+  device on same-user-same-active-installId; different-device-active
+  409 path untouched
+- New tenant/ package (Tenant, TenantRepository) — minimal read-only,
+  only id/name mapped, safe under ddl-auto=validate
+- InviteService coordinates status transition + calls DeviceService
+  directly (no logic duplication)
+- Idempotency re-verified after fix: 2nd accept call = 200, one device
+  row, no duplicate
+- Lesson: task descriptions claiming "already fixed" still need
+  verification — cross-check DEVLOG, don't assume
+
+  ## 2026-07-15 · Batch 4 T16: Join screen + profile contract — DONE
+- Join screen matches login/OTP visual style (LogoMark/PlateauCard/PrimaryButton)
+- 🐛 Bug: router redirect only watched `status`, not `needsJoin` — after
+  successful join, user stayed stranded on blank /join (backend succeeded,
+  UI never re-navigated). Fixed: redirect now listens to (status, needsJoin).
+- 🐛 Bug: no rule to move ACTIVE user off /join if somehow revisited — fixed
+- Profile contract card reuses T14's contractProvider, no second fetch
+- Full flow verified: invite→OTP→join→home→re-login-skips-join, all correct

@@ -15,6 +15,9 @@ class AuthState {
     this.userEmail,
     this.busy = false,
     this.error,
+    this.needsJoin = false,
+    this.joinTenantName,
+    this.joinEmployeeName,
   });
 
   final AuthStatus status;
@@ -24,6 +27,12 @@ class AuthState {
   final bool busy;
   final String? error;
 
+  /// True once OTP verify finds the employee still INVITED — the router
+  /// holds them on /join until [AuthController.acceptInvite] succeeds.
+  final bool needsJoin;
+  final String? joinTenantName;
+  final String? joinEmployeeName;
+
   AuthState copyWith({
     AuthStatus? status,
     String? pendingEmail,
@@ -31,6 +40,9 @@ class AuthState {
     String? userEmail,
     bool? busy,
     String? error,
+    bool? needsJoin,
+    String? joinTenantName,
+    String? joinEmployeeName,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -39,6 +51,9 @@ class AuthState {
       userEmail: userEmail ?? this.userEmail,
       busy: busy ?? this.busy,
       error: error,
+      needsJoin: needsJoin ?? this.needsJoin,
+      joinTenantName: joinTenantName ?? this.joinTenantName,
+      joinEmployeeName: joinEmployeeName ?? this.joinEmployeeName,
     );
   }
 }
@@ -88,8 +103,10 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  /// Verifies [code] for the pending email, then enrolls the device and
-  /// transitions to authenticated. Returns true on success.
+  /// Verifies [code] for the pending email, then checks the employee's
+  /// tenant status: INVITED holds them on /join (device enrollment deferred
+  /// to [acceptInvite]); ACTIVE enrolls the device and goes straight to
+  /// /home as before. Returns true on success either way.
   Future<bool> verifyOtp(String code) async {
     final email = state.pendingEmail;
     if (email == null) {
@@ -104,6 +121,19 @@ class AuthController extends Notifier<AuthState> {
       await _storage.writeUserName(result.userName);
       await _storage.writeUserEmail(email);
 
+      final tenant = await _repo.getMyTenant();
+      if (tenant.isInvited) {
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          userName: result.userName,
+          userEmail: email,
+          needsJoin: true,
+          joinTenantName: tenant.tenantName,
+          joinEmployeeName: tenant.employeeName,
+        );
+        return true;
+      }
+
       // Enrollment is the gate for punching — must succeed before Home.
       await _repo.enrollDevice();
 
@@ -112,6 +142,24 @@ class AuthController extends Notifier<AuthState> {
         status: AuthStatus.authenticated,
         userName: result.userName,
         userEmail: email,
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(busy: false, error: _messageFor(e));
+      return false;
+    }
+  }
+
+  /// Accepts the pending invite from /join — enrolls the device and clears
+  /// [AuthState.needsJoin], letting the router carry the user to /home.
+  Future<bool> acceptInvite() async {
+    state = state.copyWith(busy: true, error: null);
+    try {
+      await _repo.acceptInvite();
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        userName: state.userName,
+        userEmail: state.userEmail,
       );
       return true;
     } on DioException catch (e) {

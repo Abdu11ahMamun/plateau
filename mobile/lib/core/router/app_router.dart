@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/screens/join_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/home/screens/home_screen.dart';
@@ -17,9 +18,13 @@ import '../../features/splash/screens/splash_screen.dart';
 /// re-evaluates redirects whenever auth status flips.
 class _AuthRouterNotifier extends ChangeNotifier {
   _AuthRouterNotifier(Ref ref) {
-    ref.listen(authControllerProvider.select((s) => s.status), (_, _) {
-      notifyListeners();
-    });
+    // Also watch needsJoin — accepting an invite doesn't change `status`
+    // (it's already `authenticated` throughout the /join detour), so a
+    // status-only selector would never refresh the router to leave /join.
+    ref.listen(
+      authControllerProvider.select((s) => (s.status, s.needsJoin)),
+      (_, _) => notifyListeners(),
+    );
   }
 }
 
@@ -30,7 +35,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
-      final status = ref.read(authControllerProvider).status;
+      final auth = ref.read(authControllerProvider);
+      final status = auth.status;
       final loc = state.matchedLocation;
       final loggingIn = loc == '/login' || loc == '/otp';
 
@@ -40,13 +46,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         case AuthStatus.unauthenticated:
           return loggingIn ? null : '/login';
         case AuthStatus.authenticated:
-          return (loc == '/splash' || loggingIn) ? '/home' : null;
+          // INVITED employees are held on /join (no /home, no bounce back
+          // to /login) until they accept — see AuthState.needsJoin.
+          if (auth.needsJoin) return loc == '/join' ? null : '/join';
+          return (loc == '/splash' || loggingIn || loc == '/join')
+              ? '/home'
+              : null;
       }
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/otp', builder: (_, _) => const OtpScreen()),
+      GoRoute(path: '/join', builder: (_, _) => const JoinScreen()),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(
         path: '/manual-punch',

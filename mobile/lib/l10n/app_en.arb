@@ -26,6 +26,31 @@
     "description": "Prefix shown before the email address on the OTP screen."
   },
   "otpButton": "Sign in",
+  "joinTitle": "{tenantName} has invited you",
+  "@joinTitle": {
+    "placeholders": {
+      "tenantName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinSubtitle": "You're joining as {employeeName}",
+  "@joinSubtitle": {
+    "placeholders": {
+      "employeeName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinButton": "Join {tenantName}",
+  "@joinButton": {
+    "placeholders": {
+      "tenantName": {
+        "type": "String"
+      }
+    }
+  },
+  "joinSignOut": "Sign out",
   "homeGreeting": "Hello, {name}",
   "@homeGreeting": {
     "description": "Home header greeting.",
@@ -107,6 +132,15 @@
   },
   "profileLanguage": "Language",
   "profileSignOut": "Sign out",
+  "profileContractTitle": "My contract",
+  "profileContractSince": "Since {startDate}",
+  "@profileContractSince": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      }
+    }
+  },
   "myHoursTitle": "My hours",
   "myHoursTotal": "This month: {total}",
   "@myHoursTotal": {
