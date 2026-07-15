@@ -47,6 +47,7 @@
   "myHoursNoSessionsHint": "Vos pointages apparaîtront ici",
   "myHoursError": "Impossible de charger les heures",
   "myHoursRetry": "Réessayer",
+  "myHoursContractLine": "Contrat : {hours}h/semaine",
   "navHome": "Accueil",
   "navHours": "Mes heures",
   "navProfile": "Profil"

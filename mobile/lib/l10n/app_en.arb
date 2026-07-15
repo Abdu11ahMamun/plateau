@@ -121,13 +121,11 @@
   "myHoursNoSessionsHint": "Your clock-ins will appear here",
   "myHoursError": "Could not load hours",
   "myHoursRetry": "Retry",
-  "@hoursContract": {
+  "myHoursContractLine": "Contract: {hours}h/week",
+  "@myHoursContractLine": {
     "placeholders": {
-      "contract": {
+      "hours": {
         "type": "int"
-      },
-      "over": {
-        "type": "String"
       }
     }
   },

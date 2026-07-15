@@ -9,3 +9,8 @@ final hoursProvider =
     FutureProvider.autoDispose.family<List<HoursSession>, String>((ref, month) {
   return ref.watch(hoursRepositoryProvider).getMyHours(month);
 });
+
+/// The signed-in employee's current contract, or null if they have none.
+final contractProvider = FutureProvider.autoDispose<Contract?>((ref) {
+  return ref.watch(hoursRepositoryProvider).getMyContract();
+});

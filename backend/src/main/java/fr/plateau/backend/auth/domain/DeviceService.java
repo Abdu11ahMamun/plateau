@@ -2,6 +2,7 @@ package fr.plateau.backend.auth.domain;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,14 @@ public class DeviceService {
 
     @Transactional
     public Device enrollDevice(Long userId, String installId, String publicKey, String platform) {
+        Optional<Device> existing = deviceRepository.findByInstallId(installId);
+        if (existing.isPresent()
+                && existing.get().getUserId().equals(userId)
+                && existing.get().getStatus() == DeviceStatus.ACTIVE) {
+            // Idempotent: same user re-submitting the same already-active device.
+            return existing.get();
+        }
+
         List<Device> activeDevices = deviceRepository.findByUserIdAndStatus(userId, DeviceStatus.ACTIVE);
         if (!activeDevices.isEmpty()) {
             throw new ConflictException("Device already enrolled. Revoke existing device first.");

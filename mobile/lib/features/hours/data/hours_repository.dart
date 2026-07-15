@@ -3,6 +3,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/dio_client.dart';
 
+/// The signed-in employee's own current contract, from GET /api/me/contract.
+class Contract {
+  const Contract({
+    required this.type,
+    required this.weeklyMinutes,
+    required this.hourlyWageCents,
+    required this.startDate,
+  });
+
+  final String type;
+  final int weeklyMinutes;
+  final int hourlyWageCents;
+  final DateTime startDate;
+
+  factory Contract.fromJson(Map<String, dynamic> json) {
+    return Contract(
+      type: json['type'] as String,
+      weeklyMinutes: json['weeklyMinutes'] as int,
+      hourlyWageCents: json['hourlyWageCents'] as int,
+      startDate: DateTime.parse(json['startDate'] as String),
+    );
+  }
+}
+
 /// One worked session for the signed-in employee.
 class HoursSession {
   const HoursSession({
@@ -51,6 +75,18 @@ class HoursRepository {
     return list
         .map((e) => HoursSession.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// GET /api/me/contract — null on 404, which just means no active
+  /// contract (a normal state for some employees, not an error).
+  Future<Contract?> getMyContract() async {
+    try {
+      final res = await _dio.get('/api/me/contract');
+      return Contract.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 }
 

@@ -290,13 +290,17 @@ class _MethodBadge extends StatelessWidget {
 
 // ── Footer ─────────────────────────────────────────────────────────────────
 
-class _Footer extends StatelessWidget {
+class _Footer extends ConsumerWidget {
   const _Footer(this.sessions);
 
   final List<HoursSession> sessions;
 
+  /// Rough weeks-per-month, used only to size a soft over/under signal —
+  /// not a payroll calculation.
+  static const _weeksPerMonth = 4.3;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final total = sessions.fold<int>(
       0,
@@ -305,6 +309,10 @@ class _Footer extends StatelessWidget {
     final h = total ~/ 60;
     final m = total % 60;
     final label = '${h}h ${m.toString().padLeft(2, '0')}min';
+
+    final contract = ref.watch(contractProvider).value;
+    final overContract = contract != null &&
+        total > contract.weeklyMinutes * _weeksPerMonth;
 
     return Container(
       width: double.infinity,
@@ -322,11 +330,30 @@ class _Footer extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Text(
-            l10n.myHoursTotal(label),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.myHoursTotal(label),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: contract == null
+                          ? null
+                          : (overContract ? AppColors.amber : AppColors.sage),
+                    ),
+              ),
+              if (contract != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  l10n.myHoursContractLine(contract.weeklyMinutes ~/ 60),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
+              ],
+            ],
           ),
         ),
       ),
