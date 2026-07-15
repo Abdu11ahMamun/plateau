@@ -84,6 +84,11 @@ export function joinedDateLabel(iso: string): string {
   return format(parseISO(iso), 'd MMM yyyy');
 }
 
+/** "2026-07-01" → "1 Jul 2026" (contract start/end dates). */
+export function contractDateLabel(iso: string): string {
+  return format(parseISO(iso), 'd MMM yyyy');
+}
+
 /** "Monday, 7 July 2026" without pulling in date-fns locales. */
 export function todayLabel(): string {
   return new Date().toLocaleDateString('en-GB', {

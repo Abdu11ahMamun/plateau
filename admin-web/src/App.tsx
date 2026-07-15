@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import LiveBoardPage from './pages/LiveBoardPage';
 import AttendancePage from './pages/AttendancePage';
 import EmployeesPage from './pages/EmployeesPage';
+import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import { useAuthStore } from './store/auth.store';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -28,6 +29,7 @@ export default function App() {
           <Route index element={<LiveBoardPage />} />
           <Route path="attendance" element={<AttendancePage />} />
           <Route path="employees" element={<EmployeesPage />} />
+          <Route path="employees/:id" element={<EmployeeDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

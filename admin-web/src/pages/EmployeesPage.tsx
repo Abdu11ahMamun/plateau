@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { isAxiosError } from 'axios';
 import {
@@ -17,13 +18,14 @@ import {
   XIcon,
 } from '../components/icons';
 
-const ROLE_STYLES: Record<Employee['role'], { bg: string; label: string }> = {
+// Exported so EmployeeDetailPage can render identical badges/status.
+export const ROLE_STYLES: Record<Employee['role'], { bg: string; label: string }> = {
   OWNER: { bg: 'bg-sage-100 text-sage-700', label: 'Owner' },
   MANAGER: { bg: 'bg-amber-100 text-amber-700', label: 'Manager' },
   EMPLOYEE: { bg: 'bg-slate-100 text-slate-600', label: 'Employee' },
 };
 
-const STATUS_STYLES: Record<Employee['status'], { dot: string; label: string }> = {
+export const STATUS_STYLES: Record<Employee['status'], { dot: string; label: string }> = {
   ACTIVE: { dot: 'bg-sage', label: 'Active' },
   INVITED: { dot: 'bg-amber', label: 'Invite sent' },
   ARCHIVED: { dot: 'bg-slate-300', label: 'Archived' },
@@ -33,6 +35,29 @@ const STATUS_STYLES: Record<Employee['status'], { dot: string; label: string }> 
 function platformLabel(platform: string | null): string {
   if (!platform) return '';
   return platform[0].toUpperCase() + platform.slice(1).toLowerCase();
+}
+
+/** Device column content — reused as-is on the employee detail page. */
+export function DeviceStatusDisplay({
+  employee,
+}: {
+  employee: Pick<Employee, 'deviceStatus' | 'devicePlatform' | 'enrolledAt'>;
+}) {
+  if (employee.deviceStatus !== 'ACTIVE') {
+    return <span className="text-xs italic text-slate-300">Not enrolled</span>;
+  }
+  return (
+    <div className="min-w-0">
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-sage-700">
+        <DeviceIcon className="h-4 w-4" />
+        Bound
+      </span>
+      <p className="mt-0.5 text-xs text-slate-400">
+        {platformLabel(employee.devicePlatform)}
+        {employee.enrolledAt && ` • ${shortDateLabel(employee.enrolledAt)}`}
+      </p>
+    </div>
+  );
 }
 
 export default function EmployeesPage() {
@@ -148,12 +173,16 @@ function Row({
   onArchive: () => void;
   archiving: boolean;
 }) {
+  const navigate = useNavigate();
   const role = ROLE_STYLES[employee.role];
   const status = STATUS_STYLES[employee.status];
   const isOwner = employee.role === 'OWNER';
 
   return (
-    <tr className="group h-16 border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist">
+    <tr
+      onClick={() => navigate(`/employees/${employee.id}`)}
+      className="group h-16 cursor-pointer border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist"
+    >
       {/* Employee */}
       <td className="px-5">
         <div className="flex items-center gap-3">
@@ -188,20 +217,7 @@ function Row({
 
       {/* Device */}
       <td className="px-5">
-        {employee.deviceStatus === 'ACTIVE' ? (
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-sage-700">
-              <DeviceIcon className="h-4 w-4" />
-              Bound
-            </span>
-            <p className="mt-0.5 text-xs text-slate-400">
-              {platformLabel(employee.devicePlatform)}
-              {employee.enrolledAt && ` • ${shortDateLabel(employee.enrolledAt)}`}
-            </p>
-          </div>
-        ) : (
-          <span className="text-xs italic text-slate-300">Not enrolled</span>
-        )}
+        <DeviceStatusDisplay employee={employee} />
       </td>
 
       {/* Joined */}
@@ -214,7 +230,10 @@ function Row({
         {!isOwner && (
           <button
             type="button"
-            onClick={onArchive}
+            onClick={(e) => {
+              e.stopPropagation();
+              onArchive();
+            }}
             disabled={archiving}
             title="Archive employee"
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-rouge-100 hover:text-rouge-700 focus:opacity-100 group-hover:opacity-100 disabled:opacity-50"
@@ -365,10 +384,11 @@ function AddEmployeeModal({
   );
 }
 
-const inputClass =
+// Exported so other modals (e.g. Add Contract) match this exact styling.
+export const inputClass =
   'w-full rounded-lg border border-plateau-border px-3 py-2 text-sm text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/40';
 
-function Field({
+export function Field({
   label,
   hint,
   required,

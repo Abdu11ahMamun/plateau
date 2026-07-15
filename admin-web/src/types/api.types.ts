@@ -18,6 +18,24 @@ export interface AttendanceRow {
   flagged: boolean;
 }
 
+export interface Contract {
+  id: number;
+  type: 'CDI' | 'CDD' | 'EXTRA';
+  weeklyMinutes: number;
+  hourlyWageCents: number;
+  startDate: string; // "2026-07-01"
+  endDate: string | null;
+  createdAt: string;
+}
+
+export interface CreateContractInput {
+  type: 'CDI' | 'CDD' | 'EXTRA';
+  weeklyMinutes: number;
+  hourlyWageCents: number;
+  startDate: string;
+  endDate?: string;
+}
+
 export interface Employee {
   id: number;
   name: string;
@@ -28,6 +46,7 @@ export interface Employee {
   deviceStatus: 'ACTIVE' | 'NONE';
   devicePlatform: string | null;
   enrolledAt: string | null; // ISO
+  currentContract: Omit<Contract, 'endDate' | 'createdAt' | 'id'> | null;
   createdAt: string; // ISO
 }
 

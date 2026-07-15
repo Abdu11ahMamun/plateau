@@ -21,3 +21,30 @@
 - Added: UnprocessableEntityException(422), ForbiddenException(403)
 - TODO: JUnit test for PunchEvaluator (money-path, no Docker needed)
 - Next: Flutter app
+
+
+
+## 2026-07-15 · Batch 1: Contract Management — DONE (with QA loop)
+- Contract CRUD, auto-close on new contract, history, tenant-scoped
+- Role-gated (OWNER/MANAGER) via SecurityUtils
+- Bug caught by QA: SMIC warning was in session summary but not in code
+  → fixed via ContractOutcome pattern (matches PunchOutcome/TokenPair)
+- QA verified via DB row inspection, not just status codes (auto-close,
+  tenant scoping, role enforcement all confirmed at data level)
+- Postman collection: postman/contract-management.json
+- QA report: qa/reports/contract-management-2026-07-15.md (+ retest)
+- Lesson: agent session summaries claiming "done" get QA-verified before
+  trusting them — this is now standard practice for every batch
+
+
+  ## 2026-07-15 · Batch 1: Contract Management — CLOSED
+- Retest 12/12 pass (was 10/12, SMIC envelope fixed)
+- Known debt (non-blocking): SMIC_HOURLY_CENTS hardcoded, needs
+  legal_rates table with effective dates (SMIC changes twice/year)
+
+
+  ## 2026-07-15 · Batch 2 T5: Contracts API client
+- Contract, CreateContractInput types added to types/api.types.ts
+- Employee.currentContract synced with backend's CurrentContractView
+- createContract() returns {contract, warnings} wrapped
+- getContracts() returns plain Contract[] — asymmetry preserved correctly
