@@ -29,13 +29,13 @@ public class ContractController {
 
     @PostMapping("/{id}/contract")
     @ResponseStatus(HttpStatus.CREATED)
-    public Contract createContract(
+    public ContractCreatedResponse createContract(
             @PathVariable Long id,
             @RequestBody ContractRequest request
     ) {
         requireOwnerOrManager();
 
-        return contractService.createContract(
+        ContractService.ContractOutcome outcome = contractService.createContractWithWarnings(
                 id,
                 SecurityUtils.getCurrentTenantId(),
                 request.type(),
@@ -44,6 +44,8 @@ public class ContractController {
                 request.startDate(),
                 request.endDate()
         );
+
+        return new ContractCreatedResponse(outcome.contract(), outcome.warnings());
     }
 
     @GetMapping("/{id}/contracts")

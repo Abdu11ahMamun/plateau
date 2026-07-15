@@ -1,6 +1,7 @@
 package fr.plateau.backend.employee.domain;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,9 @@ public class ContractService {
 
     private static final Set<String> ALLOWED_CONTRACT_TYPES =
             Set.of("CDI", "CDD", "EXTRA");
+
+    private static final int SMIC_HOURLY_CENTS = 1231;
+    // TODO: move to legal_rates table (SMIC changes twice a year)
 
     private final ContractRepository contractRepository;
     private final EntityManager entityManager;
@@ -58,6 +62,28 @@ public class ContractService {
         );
 
         return contractRepository.save(contract);
+    }
+
+    @Transactional
+    public ContractOutcome createContractWithWarnings(
+            Long userId,
+            Long tenantId,
+            String type,
+            Integer weeklyMinutes,
+            Integer hourlyWageCents,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        Contract contract = createContract(
+                userId, tenantId, type, weeklyMinutes, hourlyWageCents, startDate, endDate
+        );
+
+        List<String> warnings = new ArrayList<>();
+        if (hourlyWageCents < SMIC_HOURLY_CENTS) {
+            warnings.add("Wage below SMIC (12.31€)");
+        }
+
+        return new ContractOutcome(contract, warnings);
     }
 
     @Transactional(readOnly = true)
@@ -179,5 +205,8 @@ public class ContractService {
                         .setParameter("contractId", contract.getId())
                         .setParameter("tenantId", tenantId)
                         .executeUpdate());
+    }
+
+    public record ContractOutcome(Contract contract, List<String> warnings) {
     }
 }

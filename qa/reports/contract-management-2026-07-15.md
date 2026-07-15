@@ -281,3 +281,64 @@ endpoint never implements a SMIC (minimum wage) check or a `warnings` response f
 `grep -rn -i "warning|SMIC" backend/src/main/java` returns no results. Status codes,
 persistence, auth/role enforcement, tenant scoping, validation bounds, and the
 auto-close-on-new-contract business rule all behave correctly.
+
+---
+
+## Retest — 2026-07-15 (after fix)
+
+Backend restarted to pick up code changes (`git diff` showed `ContractController` and
+`ContractService` modified, plus new `ContractCreatedResponse.java`): `createContract` now
+returns `ContractCreatedResponse{contract, warnings}`, built from a new
+`ContractService.createContractWithWarnings(...)` that compares `hourlyWageCents` against a
+`SMIC_HOURLY_CENTS = 1231` constant and appends `"Wage below SMIC (12.31€)"` when the wage is
+below it.
+
+Only the two previously-failing checks were re-run, per instruction. Employee 1's `contracts`
+rows were cleared again first (`DELETE FROM contracts WHERE user_id=1 AND tenant_id=1`) since
+leftover rows from an intermediate run (`id=5` 2026-07-01→2026-08-31, `id=6` 2026-09-01→open)
+were present and would have collided with the collection's fixed dates the same way as in the
+original run. A fresh OTP login for karim@example.com was performed to get a valid token
+(the prior token had expired).
+
+### [PASS] Create Contract - Valid CDI
+- Endpoint: `POST /api/employees/1/contract`
+- Expected: 201, body has `contract.id`, `warnings: []`
+- Actual: 201, `{"contract":{"id":7,...},"warnings":[]}`
+- Notes: Response now wrapped in `{contract, warnings}` as expected. Previous failure (missing envelope/warnings key) is resolved.
+- Curl:
+```
+curl -s -o retest_r3.body -w "HTTP_STATUS:%{http_code}\n" -X POST http://localhost:8080/api/employees/1/contract \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"type":"CDI","weeklyMinutes":1200,"hourlyWageCents":1231,"startDate":"2026-07-01"}'
+```
+Result: `HTTP_STATUS:201`
+```json
+{"contract":{"id":7,"userId":1,"tenantId":1,"type":"CDI","weeklyMinutes":1200,"hourlyWageCents":1231,"startDate":"2026-07-01","endDate":null,"createdAt":"2026-07-15T15:30:54.996084Z"},"warnings":[]}
+```
+
+### [PASS] Create Contract - Below SMIC
+- Endpoint: `POST /api/employees/1/contract`
+- Expected: 201, `warnings: ["Wage below SMIC (12.31€)"]`
+- Actual: 201, `warnings: ["Wage below SMIC (12.31€)"]` — exact match
+- Notes: SMIC threshold implemented as `SMIC_HOURLY_CENTS = 1231` in `ContractService`, with a `// TODO: move to legal_rates table (SMIC changes twice a year)` comment flagging it as a hardcoded value — worth tracking but not a functional defect for this retest.
+- Curl:
+```
+curl -s -o retest_r5.body -w "HTTP_STATUS:%{http_code}\n" -X POST http://localhost:8080/api/employees/1/contract \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"type":"CDI","weeklyMinutes":1200,"hourlyWageCents":1000,"startDate":"2026-09-01"}'
+```
+Result: `HTTP_STATUS:201`
+```json
+{"contract":{"id":8,"userId":1,"tenantId":1,"type":"CDI","weeklyMinutes":1200,"hourlyWageCents":1000,"startDate":"2026-09-01","endDate":null,"createdAt":"2026-07-15T15:31:02.330347Z"},"warnings":["Wage below SMIC (12.31€)"]}
+```
+
+### Retest summary
+
+| # | Check | Original | Retest |
+|---|---|---|---|
+| 3 | Create Contract - Valid CDI | FAIL | **PASS** |
+| 5 | Create Contract - Below SMIC | FAIL | **PASS** |
+
+Both previously-failing checks now pass. Overall suite: **12/12 pass.**
