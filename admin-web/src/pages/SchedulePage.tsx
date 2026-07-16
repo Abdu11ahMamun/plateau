@@ -339,7 +339,7 @@ export default function SchedulePage() {
             <table className="border-collapse text-left">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 w-[176px] min-w-[176px] border-b border-r border-plateau-border bg-mist/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="sticky left-0 z-20 w-[176px] min-w-[176px] border-b border-r border-plateau-border bg-mist px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Employee
                   </th>
                   {days.map((d) => (
@@ -353,7 +353,7 @@ export default function SchedulePage() {
                   ))}
                 </tr>
                 <tr>
-                  <th className="sticky left-0 z-20 border-b border-r border-plateau-border bg-mist/40" />
+                  <th className="sticky left-0 z-20 border-b border-r border-plateau-border bg-mist" />
                   {days.flatMap((d) => [
                     <th
                       key={`${d}-M`}

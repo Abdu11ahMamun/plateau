@@ -176,6 +176,8 @@ public class ScheduleService {
                     shift.getNote()
             );
             copy.setBreakMinutes(shift.getBreakMinutes());
+            copy.setCovering(shift.isCovering());
+            copy.setCoveringForUserId(shift.getCoveringForUserId());
             shiftRepository.save(copy);
         }
 

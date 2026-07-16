@@ -272,3 +272,22 @@
   published-week-edit-blocked — both hold at API level
 - Presenter note: "Open" status still carries userId (means "this
   person's slot is tentative"), only Covering produces truly unassigned
+
+
+## 2026-07-16 · Post-QA bug fixes — both verified, demo-ready
+- copyWeek(): fixed missing covering/coveringForUserId copy (root
+  cause: Shift copy-constructor takes fixed field subset, covering
+  defaults false internally). Verified via fresh GET, not copy response.
+- Sticky header scroll-bleed: root cause was ONLY the two <th> sticky
+  cells using bg-mist/60 and bg-mist/40 (transparent). Employee-name
+  <td> was already bg-white/opaque — task assumed both were broken,
+  agent grepped first and found only half were. Non-sticky day headers
+  correctly left untouched (never part of the bug).
+- Verified at 3 scroll offsets (180/350/600px), not just before/after
+
+## 2026-07-16 · Post-fix retest — 0 known issues, DEMO-READY
+- Both bugs confirmed fixed: copy-preserves-covering (fresh GET
+  verified), sticky header (7 scroll offsets, not just endpoints)
+- pre-demo-final-2026-07-16.md verdict updated: "Demo-ready, 0 known
+  issues"
+- Scheduling memory cleaned of stale bug warnings

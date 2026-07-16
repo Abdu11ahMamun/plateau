@@ -4,18 +4,17 @@
 **Scope:** Full demo-rehearsal story across Schedule creation, Covering, Copy + Breaks, and
 data-integrity/edge cases — exactly what will be shown to the client tomorrow.
 
-## VERDICT: Demo-ready with two rough edges to steer around — do NOT scroll the schedule grid on a narrow window, and do NOT demo "Copy last week" right after a Covering assignment.
+## VERDICT (updated after retest): Demo-ready, 0 known issues.
 
-Everything that will actually be *clicked through* in a normal desktop-width demo — building a
-week, publishing it, marking someone as needing cover and assigning a replacement, editing the
-break default, and the role/security boundaries around all of that — worked correctly and looked
-clean in every screenshot. Two real bugs surfaced, both avoidable live: (1) copying a week silently
-drops the "covering" badge/history from any shift that was a covering assignment (data itself is
-fine, just the badge/history is lost on the copy), and (2) the schedule grid's sticky "Employee"
-column header renders garbled, overlapping text if you horizontally scroll it at mobile/narrow
-widths (≤375px) — a real visual bug, not a screenshot artifact, confirmed by an actual scroll
-interaction. Neither blocks the core story; both are named explicitly below with a workaround so
-the presenter doesn't stumble into them live.
+~~Demo-ready with two rough edges to steer around — do NOT scroll the schedule grid on a narrow
+window, and do NOT demo "Copy last week" right after a Covering assignment.~~ **Both fixed and
+reverified — see "Retest — 2026-07-16" below.** Everything that will actually be *clicked through*
+in a normal desktop-width demo — building a week, publishing it, marking someone as needing cover
+and assigning a replacement, editing the break default, and the role/security boundaries around
+all of that — worked correctly and looked clean in every screenshot from the original pass. The two
+bugs found in that pass (copy dropping covering metadata; sticky header bleed-through on mobile
+scroll) have both been fixed and independently reverified against the new backend/frontend build —
+no known issues remain, and no demo-time workarounds are needed.
 
 ---
 
@@ -143,3 +142,36 @@ directly against the API), the full Covering flow with its badge and tooltip, th
 break-default setting's round-trip, employee-list/schedule-row data integrity, the
 scheduling/attendance separation, and the two backend-only edge cases in Part E — held up cleanly
 under close inspection.
+
+---
+
+## Retest — 2026-07-16
+
+Backend and frontend restarted to pick up the fixes. Diff confirmed before retesting:
+`ScheduleService.copyWeek()` now calls `copy.setCovering(shift.isCovering())` and
+`copy.setCoveringForUserId(shift.getCoveringForUserId())` when building each copied shift; the
+sticky Employee `<th>` header cells in `SchedulePage.tsx` changed from semi-transparent
+`bg-mist/60`/`bg-mist/40` to opaque `bg-mist`.
+
+Only the two previously-failing checks were re-run, per instruction — the other 12 checks from the
+original pass are unaffected by these fixes and were not repeated.
+
+### [PASS] Retest 1: Copy a week with an active covering assignment
+- Expected: The copy preserves `covering:true` and `coveringForUserId` correctly, verified via a fresh `GET` on the new week (not just the copy mutation's response)
+- Actual: Reused the source week (2026-07-13, PUBLISHED) which still had its original covering assignment from the first pass (Karim covering for Lea's Mon-M shift: `covering:true, coveringForUserId:3`) — cleaned the target week (2026-07-20) of its old buggy-copy leftovers first, then used the same UI action as the original test ("Copy last week" from the 2026-07-20 view, which copies from 2026-07-13). Fetched the target week fresh via `GET /api/admin/schedule/week?start=2026-07-20` *after* the copy completed (not the copy response body) and found the copied shift with `covering:true, coveringForUserId:3` — identical to the source. All other fields (times, break, status) also carried over correctly, as they did originally.
+- Notes: Screenshot `RETEST1-copied-week.png`. Bug is fixed.
+
+### [PASS] Retest 2: Mobile 375px, horizontal scroll through multiple offsets
+- Expected: Sticky Employee column header and all employee-name cells stay fully opaque and readable at every scroll position, not just the start/end
+- Actual: Scrolled the grid programmatically through 7 offsets (0, 150, 300, 450, 600, 750, 900px — well beyond just start/end) and at every single one: the header cell's text content was exactly `"Employee"` (no bled-through characters) with a fully opaque computed background (`rgb(240, 239, 233)`, no alpha channel); every employee-name body cell (Karim Dupont, Lea Martin, Abdullah Al Mamun) also stayed opaque and fully readable. No overflow on the outer page at any point.
+- Notes: Screenshots `RETEST2-scroll-0.png` through `RETEST2-scroll-900.png` (7 total, one per offset). Bug is fixed — confirmed across a full scroll sweep, not just the two endpoints.
+
+### Retest summary
+
+| # | Check | Original | Retest |
+|---|---|---|---|
+| 7 | Copy preserves covering metadata | FAIL | **PASS** |
+| 13 | Mobile 375px sticky header stays opaque | FAIL | **PASS** |
+
+Both previously-failing checks now pass. Combined with the 12 unaffected checks from the original
+pass, the module is **14/14 pass, 0 known issues** as of this retest.

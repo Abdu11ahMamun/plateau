@@ -1,7 +1,7 @@
 package fr.plateau.backend.timeclock.domain;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,17 +20,13 @@ import fr.plateau.backend.timeclock.data.Session;
 import fr.plateau.backend.timeclock.data.SessionRepository;
 
 @Service
-public class MonthlySummaryService {
-
-    // Average weeks per month (365.25 / 12 / 7), used only for this
-    // simplified monthly-average threshold.
-    private static final double AVERAGE_WEEKS_PER_MONTH = 4.345;
+public class ReportSummaryService {
 
     private final SessionRepository sessionRepository;
     private final EmployeeRepository employeeRepository;
     private final ContractService contractService;
 
-    public MonthlySummaryService(
+    public ReportSummaryService(
             SessionRepository sessionRepository,
             EmployeeRepository employeeRepository,
             ContractService contractService
@@ -41,28 +37,29 @@ public class MonthlySummaryService {
     }
 
     @Transactional(readOnly = true)
-    public List<EmployeeMonthlySummary> getMonthlySummary(Long tenantId, YearMonth month) {
-        LocalDate start = month.atDay(1);
-        LocalDate end = month.plusMonths(1).atDay(1);
-
-        // Reuses the same query that powers GET /api/admin/attendance,
+    public List<EmployeeMonthlySummary> getSummary(Long tenantId, LocalDate from, LocalDate to) {
+        // Reuses the same query shape that powers GET /api/admin/attendance,
         // grouped in-memory instead of issuing one query per employee.
-        Map<Long, List<Session>> sessionsByUser = sessionRepository.findByMonth(tenantId, start, end).stream()
+        Map<Long, List<Session>> sessionsByUser = sessionRepository
+                .findByTenantIdAndWorkDateBetween(tenantId, from, to).stream()
                 .collect(Collectors.groupingBy(Session::getUserId));
 
         List<Employee> activeEmployees = employeeRepository.findAllByTenantId(tenantId).stream()
                 .filter(employee -> employee.getStatus() == EmployeeStatus.ACTIVE)
                 .toList();
 
+        long daysInRange = ChronoUnit.DAYS.between(from, to) + 1;
+
         return activeEmployees.stream()
                 .map(employee -> summarize(
                         employee,
                         sessionsByUser.getOrDefault(employee.getId(), List.of()),
-                        tenantId))
+                        tenantId,
+                        daysInRange))
                 .toList();
     }
 
-    private EmployeeMonthlySummary summarize(Employee employee, List<Session> sessions, Long tenantId) {
+    private EmployeeMonthlySummary summarize(Employee employee, List<Session> sessions, Long tenantId, long daysInRange) {
         int totalMinutes = sessions.stream()
                 .map(Session::getMinutesTotal)
                 .filter(Objects::nonNull)
@@ -78,11 +75,12 @@ public class MonthlySummaryService {
         int normalMinutes;
         int overtimeMinutes;
         if (contract.isPresent()) {
-            // SIMPLIFIED: monthly-average threshold, not per-week HCR
-            // complémentaires calc. Revisit before real payroll use.
-            int monthlyContractMinutes = Math.round(contract.get().getWeeklyMinutes() * (float) AVERAGE_WEEKS_PER_MONTH);
-            normalMinutes = Math.min(totalMinutes, monthlyContractMinutes);
-            overtimeMinutes = Math.max(0, totalMinutes - monthlyContractMinutes);
+            // SIMPLIFIED: prorated-by-days threshold (weeklyMinutes * days/7),
+            // not real per-week HCR complémentaires calc. Revisit before real
+            // payroll use.
+            int contractMinutesForRange = Math.round(contract.get().getWeeklyMinutes() * (float) (daysInRange / 7.0));
+            normalMinutes = Math.min(totalMinutes, contractMinutesForRange);
+            overtimeMinutes = Math.max(0, totalMinutes - contractMinutesForRange);
         } else {
             normalMinutes = totalMinutes;
             overtimeMinutes = 0;

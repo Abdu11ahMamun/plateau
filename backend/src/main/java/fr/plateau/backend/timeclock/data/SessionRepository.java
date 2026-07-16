@@ -29,4 +29,11 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
             @Param("userId") Long userId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
+
+    @Query("SELECT s FROM Session s WHERE s.tenantId = :tenantId "
+            + "AND s.workDate >= :from AND s.workDate <= :to")
+    List<Session> findByTenantIdAndWorkDateBetween(
+            @Param("tenantId") Long tenantId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }
