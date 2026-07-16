@@ -18,6 +18,16 @@ export interface AttendanceRow {
   flagged: boolean;
 }
 
+export interface MonthlySummaryRow {
+  employeeId: number;
+  name: string;
+  totalMinutes: number;
+  normalMinutes: number;
+  overtimeMinutes: number;
+  flaggedCount: number;
+  hasContract: boolean;
+}
+
 export interface Contract {
   id: number;
   type: 'CDI' | 'CDD' | 'EXTRA';

@@ -185,3 +185,19 @@ export function MailIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function ReportIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8.25 6.75h7.5M8.25 12h7.5M8.25 17.25h4.5M6 3.75h12A1.5 1.5 0 0 1 19.5 5.25v13.5A1.5 1.5 0 0 1 18 20.25H6A1.5 1.5 0 0 1 4.5 18.75V5.25A1.5 1.5 0 0 1 6 3.75Z" />
+    </svg>
+  );
+}
+
+export function PrinterIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6.75 8.25V4.5a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 .75.75v3.75M6.75 18.75H5.25a1.5 1.5 0 0 1-1.5-1.5v-6a1.5 1.5 0 0 1 1.5-1.5h13.5a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5h-1.5M6.75 14.25h10.5v6a.75.75 0 0 1-.75.75h-9a.75.75 0 0 1-.75-.75v-6Z" />
+    </svg>
+  );
+}

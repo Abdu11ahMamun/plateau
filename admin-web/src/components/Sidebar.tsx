@@ -6,6 +6,7 @@ import {
   BoardIcon,
   ClipboardIcon,
   UsersIcon,
+  ReportIcon,
   CalendarIcon,
   CashIcon,
   LogoutIcon,
@@ -89,6 +90,20 @@ export default function Sidebar() {
         >
           <ClipboardIcon className="h-5 w-5 shrink-0" />
           Attendance
+        </NavLink>
+
+        <NavLink
+          to="/reports"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-sage text-white'
+                : 'text-slate-300 hover:bg-white/5'
+            }`
+          }
+        >
+          <ReportIcon className="h-5 w-5 shrink-0" />
+          Reports
         </NavLink>
 
         <NavLink

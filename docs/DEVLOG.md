@@ -147,3 +147,36 @@
 - 🐛 Bug: no rule to move ACTIVE user off /join if somehow revisited — fixed
 - Profile contract card reuses T14's contractProvider, no second fetch
 - Full flow verified: invite→OTP→join→home→re-login-skips-join, all correct
+
+## 2026-07-15 · EMPLOYEE MANAGEMENT MODULE — CLOSED, 17/17 final QA
+- Full cross-platform story verified: owner creates employee+contract
+  (React) → employee onboards (Flutter: OTP→Join→home) → punches
+  in/out → owner sees it live, no refresh (device bound, attendance,
+  This-month summary) → lifecycle cleanup (revoke→promote→archive→
+  filter) all correct
+- SMIC warning verified against actual code constant, not assumed
+- Zero product bugs in final pass; 2 tooling-only issues (Playwright
+  UTC-vs-local date, mis-tapped coordinate) — both documented, both
+  self-corrected, neither is a product defect
+- Verdict: READY TO DEMO to pilot clients
+
+## 2026-07-16 · Reporting Sprint: Monthly Summary backend — DONE
+- MonthlySummaryService: groups sessions by userId in-memory (no N+1),
+  reuses SessionRepository.findByMonth from attendance path
+- SIMPLIFIED overtime calc explicitly commented — monthly-average
+  threshold, NOT per-week HCR complémentaires — revisit before real payroll
+- Cross-checked manually: Lea 25min/11 sessions, Karim 612min/19 sessions
+  (2 flagged) — both match attendance page exactly
+- 403 for EMPLOYEE-role verified beyond required scope
+
+## 2026-07-16 · Reporting Sprint: Monthly Summary frontend — DONE
+- Reused MonthSelector/EmptyState/csvCell from AttendancePage — consistent style
+- EN|FR export toggle: headers translate, data never does
+- PDF via dedicated /reports/print route + window.print(), zero new deps
+  (date-fns/locale/fr already bundled)
+- Verified against real backend: Karim 612min→"10h 12min", 4 employees
+  correctly flagged "No contract" (DB-verified)
+- Gap found: no tenant-name endpoint exists for authenticated admin app
+  (only exposed pre-login in invite flow) — print header dropped tenant
+  name rather than fabricate it. TODO: add GET /api/me/tenant-name
+  equivalent for admin role, or reuse existing /api/me/tenant

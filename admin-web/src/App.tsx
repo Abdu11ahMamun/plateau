@@ -6,6 +6,8 @@ import LiveBoardPage from './pages/LiveBoardPage';
 import AttendancePage from './pages/AttendancePage';
 import EmployeesPage from './pages/EmployeesPage';
 import EmployeeDetailPage from './pages/EmployeeDetailPage';
+import ReportsPage from './pages/ReportsPage';
+import ReportsPrintPage from './pages/ReportsPrintPage';
 import { useAuthStore } from './store/auth.store';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -18,6 +20,15 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* No Layout chrome — this route is a print-only view. */}
+        <Route
+          path="/reports/print"
+          element={
+            <RequireAuth>
+              <ReportsPrintPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/"
           element={
@@ -30,6 +41,7 @@ export default function App() {
           <Route path="attendance" element={<AttendancePage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="employees/:id" element={<EmployeeDetailPage />} />
+          <Route path="reports" element={<ReportsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

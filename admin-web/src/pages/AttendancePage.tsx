@@ -361,7 +361,8 @@ const STATUS_FILTER_LABELS: Record<string, string> = {
 
 // ── Pieces ───────────────────────────────────────────────────────────────
 
-function MonthSelector({
+// Exported so ReportsPage's header matches this one exactly.
+export function MonthSelector({
   month,
   onChange,
 }: {
@@ -695,7 +696,7 @@ function EmptyRow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function EmptyState({
+export function EmptyState({
   icon,
   title,
   subtitle,
@@ -767,7 +768,7 @@ function exportCsv(rows: AttendanceRow[], month: string) {
   URL.revokeObjectURL(url);
 }
 
-function csvCell(value: string | number): string {
+export function csvCell(value: string | number): string {
   const s = String(value);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
