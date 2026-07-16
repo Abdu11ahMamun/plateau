@@ -59,3 +59,21 @@ export async function getShiftTemplates(): Promise<ShiftTemplate[]> {
   );
   return data;
 }
+
+export async function markNeedsCovering(shiftId: number): Promise<Shift> {
+  const { data } = await apiClient.post<Shift>(
+    `/api/admin/schedule/shifts/${shiftId}/needs-covering`
+  );
+  return data;
+}
+
+export async function assignCoverer(
+  shiftId: number,
+  coveringUserId: number
+): Promise<Shift> {
+  const { data } = await apiClient.post<Shift>(
+    `/api/admin/schedule/shifts/${shiftId}/assign-coverer`,
+    { coveringUserId }
+  );
+  return data;
+}

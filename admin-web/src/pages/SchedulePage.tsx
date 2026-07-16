@@ -10,6 +10,8 @@ import {
   unpublishWeek,
   copyWeek,
   getShiftTemplates,
+  markNeedsCovering,
+  assignCoverer,
 } from '../api/schedule';
 import { getEmployees } from '../api/employees';
 import type {
@@ -32,6 +34,7 @@ import {
   todayLabel,
 } from '../lib/format';
 import { IconBtn } from './AttendancePage';
+import { SelectInput } from './EmployeesPage';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -83,6 +86,11 @@ export default function SchedulePage() {
     () => (employeesData ?? []).filter((e) => e.status === 'ACTIVE'),
     [employeesData]
   );
+  const employeeNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const e of employeesData ?? []) map.set(e.id, e.name);
+    return map;
+  }, [employeesData]);
   const templates = templatesData ?? [];
   const week = data?.week;
   const shifts = useMemo(() => data?.shifts ?? [], [data]);
@@ -92,6 +100,19 @@ export default function SchedulePage() {
     const map = new Map<string, Shift>();
     for (const s of shifts) {
       if (s.userId != null) map.set(shiftKey(s.userId, s.shiftDate, s.slot), s);
+    }
+    return map;
+  }, [shifts]);
+
+  // A shift marked "needs covering" has userId=null, so it drops out of
+  // shiftsByKey above — it must still render on the ORIGINAL employee's row
+  // (the gap in their schedule) until someone is assigned to cover it.
+  const needsCoveringByKey = useMemo(() => {
+    const map = new Map<string, Shift>();
+    for (const s of shifts) {
+      if (s.userId == null && s.status === 'OPEN' && s.coveringForUserId != null) {
+        map.set(shiftKey(s.coveringForUserId, s.shiftDate, s.slot), s);
+      }
     }
     return map;
   }, [shifts]);
@@ -131,6 +152,33 @@ export default function SchedulePage() {
       toast.success('Shift cleared');
     },
     onError: () => toast.error('Could not clear shift'),
+  });
+
+  const markNeedsCoveringMutation = useMutation({
+    mutationFn: (shiftId: number) => markNeedsCovering(shiftId),
+    onSuccess: (updated) => {
+      patchWeek((old) => ({
+        ...old,
+        shifts: old.shifts.map((s) => (s.id === updated.id ? updated : s)),
+      }));
+      setPopover(null);
+      toast.success('Marked as needing coverage');
+    },
+    onError: () => toast.error('Could not mark this shift as needing coverage'),
+  });
+
+  const assignCovererMutation = useMutation({
+    mutationFn: ({ shiftId, coveringUserId }: { shiftId: number; coveringUserId: number }) =>
+      assignCoverer(shiftId, coveringUserId),
+    onSuccess: (updated) => {
+      patchWeek((old) => ({
+        ...old,
+        shifts: old.shifts.map((s) => (s.id === updated.id ? updated : s)),
+      }));
+      setPopover(null);
+      toast.success('Coverer assigned');
+    },
+    onError: () => toast.error('Could not assign this coverer'),
   });
 
   const copyMutation = useMutation({
@@ -321,11 +369,13 @@ export default function SchedulePage() {
                       </td>
                       {days.flatMap((date) =>
                         SLOTS.map((slot) => {
-                          const shift = shiftsByKey.get(shiftKey(employee.id, date, slot));
+                          const key = shiftKey(employee.id, date, slot);
+                          const shift = shiftsByKey.get(key) ?? needsCoveringByKey.get(key);
                           return (
                             <td key={`${date}-${slot}`} className="border-l border-plateau-border p-0 first:border-l-0">
                               <Cell
                                 shift={shift}
+                                employeeNameById={employeeNameById}
                                 onOpen={(e) => openPopover(e, employee, date, slot, shift)}
                               />
                             </td>
@@ -348,11 +398,26 @@ export default function SchedulePage() {
             popover={popover}
             week={week ?? null}
             templates={templates}
+            employees={employees}
             saving={upsertMutation.isPending}
             deleting={deleteMutation.isPending}
+            markingCovering={markNeedsCoveringMutation.isPending}
+            assigning={assignCovererMutation.isPending}
             onClose={() => setPopover(null)}
             onSave={(input) => upsertMutation.mutate(input)}
             onDelete={(id) => deleteMutation.mutate(id)}
+            onMarkNeedsCovering={(id) => {
+              if (
+                !window.confirm(
+                  `Mark this shift as needing coverage? ${popover.employee.name} will be removed and this shift becomes open.`
+                )
+              )
+                return;
+              markNeedsCoveringMutation.mutate(id);
+            }}
+            onAssignCoverer={(id, coveringUserId) =>
+              assignCovererMutation.mutate({ shiftId: id, coveringUserId })
+            }
           />
         </>
       )}
@@ -391,9 +456,11 @@ const DAY_OFF_HATCH = {
 
 function Cell({
   shift,
+  employeeNameById,
   onOpen,
 }: {
   shift: Shift | undefined;
+  employeeNameById: Map<number, string>;
   onOpen: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const status = shift?.status;
@@ -434,7 +501,11 @@ function Cell({
       {content}
       {shift?.covering && (
         <span
-          title="Covering"
+          title={
+            shift.coveringForUserId != null
+              ? `Covering for ${employeeNameById.get(shift.coveringForUserId) ?? 'another employee'}`
+              : 'Covering'
+          }
           className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-sage text-[8px] leading-none text-white ring-2 ring-white"
         >
           ↔
@@ -465,11 +536,16 @@ function CellPopover({
   popover,
   week,
   templates,
+  employees,
   saving,
   deleting,
+  markingCovering,
+  assigning,
   onClose,
   onSave,
   onDelete,
+  onMarkNeedsCovering,
+  onAssignCoverer,
 }: {
   popover: {
     employee: Employee;
@@ -481,11 +557,16 @@ function CellPopover({
   };
   week: { id: number; weekStartDate: string; status: string } | null;
   templates: ShiftTemplate[];
+  employees: Employee[];
   saving: boolean;
   deleting: boolean;
+  markingCovering: boolean;
+  assigning: boolean;
   onClose: () => void;
   onSave: (input: UpsertShiftInput) => void;
   onDelete: (shiftId: number) => void;
+  onMarkNeedsCovering: (shiftId: number) => void;
+  onAssignCoverer: (shiftId: number, coveringUserId: number) => void;
 }) {
   const { employee, date, slot, shift, top, left } = popover;
   const template = templates.find((t) => t.slot === slot);
@@ -494,8 +575,15 @@ function CellPopover({
   const [status, setStatus] = useState<ShiftStatus>(shift?.status ?? 'SCHEDULED');
   const [start, setStart] = useState(hm(shift?.startTime) || hm(template?.defaultStart) || '10:00');
   const [end, setEnd] = useState(hm(shift?.endTime) || hm(template?.defaultEnd) || '18:00');
+  const [coveringUserId, setCoveringUserId] = useState('');
 
   const slotLabel = slot === 'M' ? 'Matin' : 'Soir';
+
+  // This shift was marked "needs covering" — it has history (coveringForUserId)
+  // and no assigned employee yet. Distinct from a fresh, never-assigned Open cell.
+  const needsCoverer = shift?.status === 'OPEN' && shift.coveringForUserId != null;
+  // A real, currently-worked shift — the only case "Needs coverage" applies to.
+  const canMarkNeedsCovering = shift?.status === 'SCHEDULED' && shift.userId != null;
 
   function handleSave() {
     if (!week) return;
@@ -532,10 +620,56 @@ function CellPopover({
         </button>
       </div>
 
-      {isPublished ? (
-        <p className="rounded-lg bg-mist px-3 py-2 text-xs text-slate-500">
-          Week is published — unpublish to edit
-        </p>
+      {needsCoverer ? (
+        // Marking-needs-covering is allowed on published weeks too (a
+        // real-time "called in sick" event), so this branch always wins.
+        <>
+          <p className="mb-3 text-xs font-medium text-amber-700">
+            Needs cover for {employee.name}
+          </p>
+          <SelectInput
+            value={coveringUserId}
+            onChange={(e) => setCoveringUserId(e.target.value)}
+            className="mb-3"
+          >
+            <option value="" disabled>
+              Assign coverer…
+            </option>
+            {employees
+              .filter((e) => e.id !== employee.id)
+              .map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+          </SelectInput>
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => onAssignCoverer(shift.id, Number(coveringUserId))}
+              disabled={!coveringUserId || assigning}
+              className="h-8 rounded-lg bg-sage px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60"
+            >
+              {assigning ? 'Assigning…' : 'Assign'}
+            </button>
+          </div>
+        </>
+      ) : isPublished ? (
+        <>
+          <p className="rounded-lg bg-mist px-3 py-2 text-xs text-slate-500">
+            Week is published — unpublish to edit
+          </p>
+          {canMarkNeedsCovering && (
+            <button
+              type="button"
+              onClick={() => onMarkNeedsCovering(shift.id)}
+              disabled={markingCovering}
+              className="mt-3 text-xs font-medium text-amber-700 transition hover:text-amber-800 disabled:opacity-60"
+            >
+              {markingCovering ? 'Marking…' : 'Needs coverage'}
+            </button>
+          )}
+        </>
       ) : (
         <>
           <div className="mb-3 grid grid-cols-2 gap-1.5">
@@ -593,6 +727,17 @@ function CellPopover({
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
+
+          {canMarkNeedsCovering && (
+            <button
+              type="button"
+              onClick={() => onMarkNeedsCovering(shift.id)}
+              disabled={markingCovering}
+              className="mt-3 text-xs font-medium text-amber-700 transition hover:text-amber-800 disabled:opacity-60"
+            >
+              {markingCovering ? 'Marking…' : 'Needs coverage'}
+            </button>
+          )}
         </>
       )}
     </div>

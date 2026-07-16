@@ -213,3 +213,18 @@
 - Bonus-verified: PUBLISHED-week exception scoped correctly — normal
   upsertShift still 409s on published, only needs-covering bypasses
 - Extracted shared findShift helper (was inline-duplicated before)
+
+## 2026-07-16 · Scheduling Sprint Day 4b: Covering UI — DONE
+- Bug caught: marking needs-coverage sets userId=null, which would
+  silently vanish the shift from the grid's userId-keyed lookup.
+  Fixed: added needsCoveringByKey fallback (keyed by coveringForUserId)
+  so the gap stays visible on the original employee's row until assigned
+- Correctly honored backend's deliberate published-week exception:
+  Needs-coverage/assign-coverer available regardless of publish state,
+  while normal Save/Clear/status editor stays draft-only
+- Popover 3-way branch: needs-cover-with-history / published-readonly
+  / normal-draft-editor
+- Tooltip built from unfiltered employee list (resolves name even if
+  original employee later archived)
+- Full flow verified end-to-end, including exact confirm-dialog wording
+  and dropdown exclusion of the original employee
