@@ -7,7 +7,15 @@ export function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-import { differenceInSeconds, parseISO, format, addMonths, addDays } from 'date-fns';
+import {
+  differenceInSeconds,
+  parseISO,
+  format,
+  addMonths,
+  addDays,
+  endOfMonth,
+} from 'date-fns';
+import type { Locale } from 'date-fns';
 
 /** "2026-07" → "July 2026". */
 export function monthLabel(ym: string): string {
@@ -105,6 +113,60 @@ export function currentWeekMonday(): string {
 /** "HH:mm:ss" or "HH:mm" → "HH:mm"; null → "". */
 export function hm(time: string | null | undefined): string {
   return time ? time.slice(0, 5) : '';
+}
+
+/** Shift a "YYYY-MM-DD" date by delta days. */
+export function shiftDate(iso: string, deltaDays: number): string {
+  return format(addDays(parseISO(iso), deltaDays), 'yyyy-MM-dd');
+}
+
+/** "2026-07-14" → "Tue 14 Jul 2026". */
+export function fullDateLabel(iso: string): string {
+  return format(parseISO(iso), 'EEE d MMM yyyy');
+}
+
+/** "2026-07" → "2026-07-31" (last day of that month). */
+export function monthEnd(ym: string): string {
+  return format(endOfMonth(parseISO(`${ym}-01`)), 'yyyy-MM-dd');
+}
+
+/** True when [from, to] exactly spans one full calendar month. */
+export function isFullMonthRange(from: string, to: string): boolean {
+  const fromDate = parseISO(from);
+  const toDate = parseISO(to);
+  return (
+    fromDate.getDate() === 1 &&
+    fromDate.getFullYear() === toDate.getFullYear() &&
+    fromDate.getMonth() === toDate.getMonth() &&
+    toDate.getDate() === endOfMonth(fromDate).getDate()
+  );
+}
+
+/**
+ * Human range label: "July 2026" for a full calendar month, "14 Jul 2026"
+ * for a single day (from === to), "8 Jul to 14 Jul 2026" otherwise —
+ * matches how a restaurant owner actually thinks about these periods.
+ */
+export function reportRangeLabel(
+  from: string,
+  to: string,
+  options?: { locale?: Locale; joiner?: string }
+): string {
+  const { locale, joiner = 'to' } = options ?? {};
+  const dfOptions = locale ? { locale } : undefined;
+
+  if (isFullMonthRange(from, to)) {
+    return format(parseISO(from), 'MMMM yyyy', dfOptions);
+  }
+  if (from === to) {
+    return format(parseISO(from), 'd MMM yyyy', dfOptions);
+  }
+  const fromDate = parseISO(from);
+  const toDate = parseISO(to);
+  const sameYear = fromDate.getFullYear() === toDate.getFullYear();
+  const fromLabel = format(fromDate, sameYear ? 'd MMM' : 'd MMM yyyy', dfOptions);
+  const toLabel = format(toDate, 'd MMM yyyy', dfOptions);
+  return `${fromLabel} ${joiner} ${toLabel}`;
 }
 
 /** "Monday, 7 July 2026" without pulling in date-fns locales. */

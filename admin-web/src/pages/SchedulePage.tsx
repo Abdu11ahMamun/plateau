@@ -451,7 +451,8 @@ export default function SchedulePage() {
 
 // ── Pieces ───────────────────────────────────────────────────────────────
 
-function WeekSelector({
+// Exported so ReportsPage's Weekly period selector matches this one exactly.
+export function WeekSelector({
   weekStart,
   onChange,
 }: {

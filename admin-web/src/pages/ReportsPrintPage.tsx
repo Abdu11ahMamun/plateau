@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getMonthlySummary } from '../api/reports';
-import { monthLabel, totalHoursLabel } from '../lib/format';
+import { getSummary } from '../api/reports';
+import { totalHoursLabel, reportRangeLabel, monthEnd } from '../lib/format';
 
 type Lang = 'en' | 'fr';
 
@@ -19,10 +19,11 @@ const PRINT_TEXT: Record<
     flagged: string;
     totalRow: string;
     noContract: string;
+    joiner: string;
   }
 > = {
   en: {
-    title: 'Monthly Summary',
+    title: 'Summary',
     employee: 'Employee',
     normal: 'Normal hours',
     overtime: 'Overtime hours',
@@ -30,9 +31,10 @@ const PRINT_TEXT: Record<
     flagged: 'Flagged sessions',
     totalRow: 'Total',
     noContract: 'No contract',
+    joiner: 'to',
   },
   fr: {
-    title: 'Résumé mensuel',
+    title: 'Résumé',
     employee: 'Employé',
     normal: 'Heures normales',
     overtime: 'Heures supplémentaires',
@@ -40,26 +42,21 @@ const PRINT_TEXT: Record<
     flagged: 'Sessions signalées',
     totalRow: 'Total',
     noContract: 'Sans contrat',
+    joiner: 'au',
   },
 };
 
-/** "2026-07" → "juillet 2026" (fr) or "July 2026" (en). */
-function monthTitle(month: string, lang: Lang): string {
-  if (lang === 'en') return monthLabel(month);
-  return format(parse(`${month}-01`, 'yyyy-MM-dd', new Date()), 'MMMM yyyy', {
-    locale: fr,
-  });
-}
-
 export default function ReportsPrintPage() {
   const [searchParams] = useSearchParams();
-  const month = searchParams.get('month') ?? format(new Date(), 'yyyy-MM');
+  const defaultMonth = format(new Date(), 'yyyy-MM');
+  const from = searchParams.get('from') ?? `${defaultMonth}-01`;
+  const to = searchParams.get('to') ?? monthEnd(defaultMonth);
   const lang: Lang = searchParams.get('lang') === 'fr' ? 'fr' : 'en';
   const t = PRINT_TEXT[lang];
 
   const { data, isLoading } = useQuery({
-    queryKey: ['monthly-summary', month],
-    queryFn: () => getMonthlySummary(month),
+    queryKey: ['summary', from, to],
+    queryFn: () => getSummary(from, to),
   });
 
   const rows = data ?? [];
@@ -76,6 +73,11 @@ export default function ReportsPrintPage() {
   const sumTotal = rows.reduce((s, r) => s + r.totalMinutes, 0);
   const sumFlagged = rows.reduce((s, r) => s + r.flaggedCount, 0);
 
+  const rangeText = reportRangeLabel(from, to, {
+    locale: lang === 'fr' ? fr : undefined,
+    joiner: t.joiner,
+  });
+
   return (
     <div className="mx-auto max-w-4xl bg-white p-10 text-ink">
       {/* Scoped print stylesheet — this route is print-only, no app chrome. */}
@@ -88,7 +90,7 @@ export default function ReportsPrintPage() {
 
       <header className="mb-6 border-b border-plateau-border pb-4">
         <h1 className="text-xl font-bold text-ink">
-          Plateau — {t.title} — {monthTitle(month, lang)}
+          Plateau — {t.title} — {rangeText}
         </h1>
       </header>
 

@@ -1,13 +1,14 @@
 import { apiClient } from './client';
 import type { MonthlySummaryRow } from '../types/api.types';
 
-/** month is "YYYY-MM". */
-export async function getMonthlySummary(
-  month: string
+/** from/to are "YYYY-MM-DD", inclusive range. */
+export async function getSummary(
+  from: string,
+  to: string
 ): Promise<MonthlySummaryRow[]> {
   const { data } = await apiClient.get<MonthlySummaryRow[]>(
-    '/api/admin/reports/monthly-summary',
-    { params: { month } }
+    '/api/admin/reports/summary',
+    { params: { from, to } }
   );
   return data;
 }
