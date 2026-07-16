@@ -291,3 +291,19 @@
 - pre-demo-final-2026-07-16.md verdict updated: "Demo-ready, 0 known
   issues"
 - Scheduling memory cleaned of stale bug warnings
+
+
+## 2026-07-16 · Leave Management Backend (L1-L3) — DONE
+- New leave/ module: leave_types, leave_requests, full request/decide/
+  cancel lifecycle
+- Maladie (sick) auto-approves per requires_approval=false — correctly
+  distinct from Congés payés which requires owner decision
+- Overlap check blocks PENDING/APPROVED collisions, ignores REJECTED/
+  CANCELLED (correct — a rejected request shouldn't block a new one)
+- userId spoofing structurally impossible: CreateLeaveRequest has no
+  userId field, SecurityUtils.getCurrentUserId() is the only source
+- Cancel is requester-only even for OWNER (by design — OWNER uses
+  reject instead to undo someone else's leave)
+- Rejection requires a note (422 if blank), approval doesn't
+- isUserOnApprovedLeave() ready but unwired — Schedule integration
+  is a separate future task, not done here
