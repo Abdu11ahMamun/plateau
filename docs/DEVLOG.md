@@ -228,3 +228,47 @@
   original employee later archived)
 - Full flow verified end-to-end, including exact confirm-dialog wording
   and dropdown exclusion of the original employee
+
+  ## 2026-07-16 · Scheduling Sprint Day 4c: Breaks — DONE
+- effectiveBreakMinutes: @Transient, computed at read time in every
+  shift-returning method (upsert/copy/covering/get) — override → template
+  → tenant default, resolved fresh every read, no backfill needed
+- Fallback chain genuinely exercised: temporarily removed Soir template
+  to force tier-3 fallback, confirmed 30 (new default) not stale 20,
+  restored afterward
+- copyWeek now carries breakMinutes override to the copy (unprompted,
+  correct call — "equivalent shift" shouldn't silently drop an override)
+- DEFAULT_BREAK_MINUTES_KEY defined once, shared between ScheduleService
+  and TenantSettingsController — no duplicated literal
+
+  ## 2026-07-16 · Scheduling Sprint Day 4d: Breaks UI — DONE
+- Break line on cell: text-[9px], deliberately smaller than the 10px
+  time text above it (literal text-xs would've inverted the hierarchy)
+- Popover break field prefill chain: effectiveBreakMinutes ?? template
+  ?? tenantDefault — sane default even on fresh cells
+- BreakDefaultCard placed above grid (no Settings page exists yet —
+  flagged as a real gap, not silently built around)
+- Template CRUD UI: confirmed via grep it doesn't exist anywhere,
+  skipped per instruction rather than scope-creep a new page
+- MANAGER hide-not-disable tested with a real temp account, not assumed
+- 🔍 FINDING (not a bug): tenant break-default is currently unreachable
+  in the UI — Matin/Soir templates are always seeded for M/S, so the
+  3rd fallback tier (tenant default) never actually triggers today.
+  Setting itself verified correct (round-trips, persists); only the
+  "flows to a new shift" observable effect is untestable under current
+  seed data. Worth knowing before demo — don't claim this tier live.
+
+  ## 2026-07-16 · Pre-demo Final QA — 12/14 PASS, 0 blockers, DEMO-READY
+- Verdict: ready with two avoid-this-click workarounds
+- 🐛 Bug: copyWeek() silently drops covering (is_covering/covering_for_
+  userId reset), times/breaks/status copy fine — DB-level confirmed,
+  backend bug. Workaround: don't copy a week with an active covering
+  assignment during demo. TODO: fix before real pilot use.
+- 🐛 Bug: sticky Employee-column header garbles on mobile horizontal
+  scroll (≤375px) — semi-transparent bg lets scrolled text bleed
+  through. Only visible mid-scroll, not on static screenshot.
+  Workaround: demo Schedule at desktop width, don't scroll narrow.
+- Verified server-side (not just UI-hidden): MANAGER-can't-unpublish,
+  published-week-edit-blocked — both hold at API level
+- Presenter note: "Open" status still carries userId (means "this
+  person's slot is tentative"), only Covering produces truly unassigned

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import fr.plateau.backend.common.ForbiddenException;
+import fr.plateau.backend.common.NotFoundException;
 import fr.plateau.backend.common.SecurityUtils;
+import fr.plateau.backend.common.UnprocessableEntityException;
 import fr.plateau.backend.scheduling.data.ScheduleWeek;
 import fr.plateau.backend.scheduling.data.Shift;
 import fr.plateau.backend.scheduling.data.ShiftTemplate;
@@ -64,7 +67,8 @@ public class ScheduleController {
                 request.startTime(),
                 request.endTime(),
                 request.status() != null ? request.status() : ShiftStatus.SCHEDULED,
-                request.note()
+                request.note(),
+                request.breakMinutes()
         );
     }
 
@@ -118,6 +122,22 @@ public class ScheduleController {
         return shiftTemplateRepository.findByTenantId(SecurityUtils.getCurrentTenantId());
     }
 
+    @PutMapping("/templates/{id}")
+    public ShiftTemplate updateTemplate(@PathVariable Long id, @RequestBody UpdateTemplateRequest request) {
+        requireOwnerOrManager();
+
+        if (request.breakMinutes() < 0 || request.breakMinutes() > 120) {
+            throw new UnprocessableEntityException("breakMinutes must be between 0 and 120");
+        }
+
+        ShiftTemplate template = shiftTemplateRepository.findById(id)
+                .filter(t -> SecurityUtils.getCurrentTenantId().equals(t.getTenantId()))
+                .orElseThrow(() -> new NotFoundException("Shift template " + id + " not found"));
+
+        template.setBreakMinutes(request.breakMinutes());
+        return shiftTemplateRepository.save(template);
+    }
+
     private WeekWithShifts toWeekWithShifts(ScheduleWeek week, List<Shift> shifts) {
         return new WeekWithShifts(
                 new WeekView(week.getId(), week.getWeekStartDate(), week.getStatus().name()),
@@ -141,7 +161,8 @@ public class ScheduleController {
             LocalTime startTime,
             LocalTime endTime,
             ShiftStatus status,
-            String note
+            String note,
+            Integer breakMinutes
     ) {
     }
 
@@ -149,6 +170,9 @@ public class ScheduleController {
     }
 
     public record AssignCovererRequest(Long coveringUserId) {
+    }
+
+    public record UpdateTemplateRequest(int breakMinutes) {
     }
 
     public record WeekView(Long id, LocalDate weekStartDate, String status) {

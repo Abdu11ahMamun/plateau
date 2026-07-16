@@ -14,21 +14,33 @@ import org.springframework.transaction.annotation.Transactional;
 import fr.plateau.backend.common.ConflictException;
 import fr.plateau.backend.common.ForbiddenException;
 import fr.plateau.backend.common.NotFoundException;
+import fr.plateau.backend.common.TenantSettingsService;
 import fr.plateau.backend.common.UnprocessableEntityException;
 import fr.plateau.backend.scheduling.data.ScheduleWeek;
 import fr.plateau.backend.scheduling.data.ScheduleWeekRepository;
 import fr.plateau.backend.scheduling.data.Shift;
 import fr.plateau.backend.scheduling.data.ShiftRepository;
+import fr.plateau.backend.scheduling.data.ShiftTemplate;
+import fr.plateau.backend.scheduling.data.ShiftTemplateRepository;
 
 @Service
 public class ScheduleService {
 
     private final ScheduleWeekRepository scheduleWeekRepository;
     private final ShiftRepository shiftRepository;
+    private final ShiftTemplateRepository shiftTemplateRepository;
+    private final TenantSettingsService tenantSettingsService;
 
-    public ScheduleService(ScheduleWeekRepository scheduleWeekRepository, ShiftRepository shiftRepository) {
+    public ScheduleService(
+            ScheduleWeekRepository scheduleWeekRepository,
+            ShiftRepository shiftRepository,
+            ShiftTemplateRepository shiftTemplateRepository,
+            TenantSettingsService tenantSettingsService
+    ) {
         this.scheduleWeekRepository = scheduleWeekRepository;
         this.shiftRepository = shiftRepository;
+        this.shiftTemplateRepository = shiftTemplateRepository;
+        this.tenantSettingsService = tenantSettingsService;
     }
 
     @Transactional
@@ -45,7 +57,9 @@ public class ScheduleService {
         ScheduleWeek week = scheduleWeekRepository.findByTenantIdAndWeekStartDate(tenantId, weekStartDate)
                 .orElseThrow(() -> new NotFoundException("No schedule week found for " + weekStartDate));
 
-        return shiftsForWeek(tenantId, week.getId());
+        return shiftsForWeek(tenantId, week.getId()).stream()
+                .map(shift -> attachEffectiveBreak(tenantId, shift))
+                .toList();
     }
 
     @Transactional
@@ -58,7 +72,8 @@ public class ScheduleService {
             LocalTime startTime,
             LocalTime endTime,
             ShiftStatus status,
-            String note
+            String note,
+            Integer breakMinutes
     ) {
         ScheduleWeek week = findWeek(tenantId, weekId);
         requireDraft(week);
@@ -91,8 +106,12 @@ public class ScheduleService {
             shift.setStatus(effectiveStatus);
             shift.setNote(note);
         }
+        // Stored exactly as given: null means "use the template default",
+        // any number (even one matching the template) becomes an explicit
+        // per-shift override.
+        shift.setBreakMinutes(breakMinutes);
 
-        return shiftRepository.save(shift);
+        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
     }
 
     @Transactional
@@ -145,7 +164,7 @@ public class ScheduleService {
         long dayShift = ChronoUnit.DAYS.between(sourceWeekStartDate, targetWeekStartDate);
 
         for (Shift shift : shiftsForWeek(tenantId, sourceWeek.getId())) {
-            shiftRepository.save(new Shift(
+            Shift copy = new Shift(
                     tenantId,
                     targetWeek.getId(),
                     shift.getUserId(),
@@ -155,10 +174,14 @@ public class ScheduleService {
                     shift.getEndTime(),
                     shift.getStatus(),
                     shift.getNote()
-            ));
+            );
+            copy.setBreakMinutes(shift.getBreakMinutes());
+            shiftRepository.save(copy);
         }
 
-        return shiftsForWeek(tenantId, targetWeek.getId());
+        return shiftsForWeek(tenantId, targetWeek.getId()).stream()
+                .map(shift -> attachEffectiveBreak(tenantId, shift))
+                .toList();
     }
 
     @Transactional
@@ -173,7 +196,7 @@ public class ScheduleService {
         shift.setUserId(null);
         shift.setStatus(ShiftStatus.OPEN);
 
-        return shiftRepository.save(shift);
+        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
     }
 
     @Transactional
@@ -194,7 +217,21 @@ public class ScheduleService {
         // coveringForUserId intentionally left as-is: history of who was
         // originally supposed to work this shift, shown by the admin panel.
 
-        return shiftRepository.save(shift);
+        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
+    }
+
+    private Shift attachEffectiveBreak(Long tenantId, Shift shift) {
+        Integer effective = shift.getBreakMinutes();
+        if (effective == null) {
+            effective = shiftTemplateRepository.findByTenantId(tenantId).stream()
+                    .filter(template -> template.getSlot() == shift.getSlot())
+                    .findFirst()
+                    .map(ShiftTemplate::getBreakMinutes)
+                    .orElseGet(() -> tenantSettingsService.getIntSetting(
+                            tenantId, TenantSettingsService.DEFAULT_BREAK_MINUTES_KEY, 20));
+        }
+        shift.setEffectiveBreakMinutes(effective);
+        return shift;
     }
 
     private Shift findShift(Long tenantId, Long shiftId) {

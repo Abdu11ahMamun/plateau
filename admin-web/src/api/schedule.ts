@@ -77,3 +77,14 @@ export async function assignCoverer(
   );
   return data;
 }
+
+export async function updateTemplateBreak(
+  templateId: number,
+  breakMinutes: number
+): Promise<ShiftTemplate> {
+  const { data } = await apiClient.put<ShiftTemplate>(
+    `/api/admin/schedule/templates/${templateId}`,
+    { breakMinutes }
+  );
+  return data;
+}

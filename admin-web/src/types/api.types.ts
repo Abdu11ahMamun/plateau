@@ -92,6 +92,8 @@ export interface Shift {
   slot: Slot;
   startTime: string | null; // "10:00:00"
   endTime: string | null;
+  breakMinutes: number | null; // explicit per-shift override, if any
+  effectiveBreakMinutes: number; // computed: override -> template -> tenant default
   status: ShiftStatus;
   covering: boolean;
   coveringForUserId: number | null;
@@ -112,6 +114,7 @@ export interface UpsertShiftInput {
   endTime?: string;
   status?: ShiftStatus;
   note?: string;
+  breakMinutes?: number;
 }
 
 export interface ShiftTemplate {
@@ -121,6 +124,10 @@ export interface ShiftTemplate {
   defaultStart: string; // "10:00:00"
   defaultEnd: string;
   breakMinutes: number;
+}
+
+export interface BreakDefault {
+  minutes: number;
 }
 
 export interface AuthUser {

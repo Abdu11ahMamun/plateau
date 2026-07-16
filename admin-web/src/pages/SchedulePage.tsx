@@ -14,6 +14,7 @@ import {
   assignCoverer,
 } from '../api/schedule';
 import { getEmployees } from '../api/employees';
+import { getBreakDefault, setBreakDefault } from '../api/settings';
 import type {
   Employee,
   Shift,
@@ -82,6 +83,11 @@ export default function SchedulePage() {
     queryFn: getShiftTemplates,
   });
 
+  const { data: breakDefaultData } = useQuery({
+    queryKey: ['break-default'],
+    queryFn: getBreakDefault,
+  });
+
   const employees = useMemo(
     () => (employeesData ?? []).filter((e) => e.status === 'ACTIVE'),
     [employeesData]
@@ -92,6 +98,7 @@ export default function SchedulePage() {
     return map;
   }, [employeesData]);
   const templates = templatesData ?? [];
+  const breakDefault = breakDefaultData?.minutes;
   const week = data?.week;
   const shifts = useMemo(() => data?.shifts ?? [], [data]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => shiftDay(weekStart, i)), [weekStart]);
@@ -216,10 +223,19 @@ export default function SchedulePage() {
     onError: () => toast.error('Could not unpublish week'),
   });
 
+  const setBreakDefaultMutation = useMutation({
+    mutationFn: (minutes: number) => setBreakDefault(minutes),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['break-default'], result);
+      toast.success('Default updated');
+    },
+    onError: () => toast.error('Could not update the default break duration'),
+  });
+
   function openPopover(e: React.MouseEvent, employee: Employee, date: string, slot: Slot, shift: Shift | undefined) {
     const rect = e.currentTarget.getBoundingClientRect();
     const POPOVER_WIDTH = 280;
-    const POPOVER_HEIGHT = 260;
+    const POPOVER_HEIGHT = 340;
     let top = rect.bottom + 8;
     if (top + POPOVER_HEIGHT > window.innerHeight) {
       top = Math.max(16, rect.top - POPOVER_HEIGHT - 8);
@@ -300,6 +316,13 @@ export default function SchedulePage() {
           )}
         </div>
       </header>
+
+      <BreakDefaultCard
+        minutes={breakDefault}
+        isOwner={isOwner}
+        saving={setBreakDefaultMutation.isPending}
+        onSave={(minutes) => setBreakDefaultMutation.mutate(minutes)}
+      />
 
       {isError && (
         <div className="rounded-lg border border-amber/40 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
@@ -398,6 +421,7 @@ export default function SchedulePage() {
             popover={popover}
             week={week ?? null}
             templates={templates}
+            breakDefault={breakDefault ?? 20}
             employees={employees}
             saving={upsertMutation.isPending}
             deleting={deleteMutation.isPending}
@@ -449,6 +473,89 @@ function WeekSelector({
   );
 }
 
+function BreakDefaultCard({
+  minutes,
+  isOwner,
+  saving,
+  onSave,
+}: {
+  minutes: number | undefined;
+  isOwner: boolean;
+  saving: boolean;
+  onSave: (minutes: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+
+  function startEditing() {
+    setValue(String(minutes ?? 20));
+    setEditing(true);
+  }
+
+  function handleSave() {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 120) return;
+    onSave(parsed);
+    setEditing(false);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-plateau-border bg-white p-4 shadow-sm">
+      <div>
+        <p className="text-sm font-semibold text-ink">Default break duration</p>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Applies to future shifts using the default — existing overrides are unaffected.
+        </p>
+      </div>
+
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            max={120}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            autoFocus
+            className="h-9 w-20 rounded-lg border border-plateau-border px-2 text-sm text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25"
+          />
+          <span className="text-sm text-slate-400">min</span>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="h-9 rounded-lg bg-sage px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-sage-600 disabled:opacity-60"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="h-9 rounded-lg border border-plateau-border bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-mist"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-ink">
+            {minutes ?? '—'}min
+          </span>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="text-xs font-medium text-sage hover:text-sage-700"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DAY_OFF_HATCH = {
   backgroundImage:
     'repeating-linear-gradient(45deg, rgba(45,53,97,0.12) 0, rgba(45,53,97,0.12) 2px, transparent 2px, transparent 9px)',
@@ -476,8 +583,15 @@ function Cell({
   } else if (status === 'SCHEDULED') {
     bgClass = 'bg-sage-100 hover:bg-sage-100/70';
     content = (
-      <span className="font-mono text-[10px] font-medium text-sage-700">
-        {hm(shift.startTime)}-{hm(shift.endTime)}
+      <span className="flex flex-col items-center leading-tight">
+        <span className="font-mono text-[10px] font-medium text-sage-700">
+          {hm(shift.startTime)}-{hm(shift.endTime)}
+        </span>
+        {shift.effectiveBreakMinutes > 0 && (
+          <span className="text-[9px] text-slate-400">
+            · {shift.effectiveBreakMinutes}min break
+          </span>
+        )}
       </span>
     );
   } else if (status === 'DAY_OFF') {
@@ -536,6 +650,7 @@ function CellPopover({
   popover,
   week,
   templates,
+  breakDefault,
   employees,
   saving,
   deleting,
@@ -557,6 +672,7 @@ function CellPopover({
   };
   week: { id: number; weekStartDate: string; status: string } | null;
   templates: ShiftTemplate[];
+  breakDefault: number;
   employees: Employee[];
   saving: boolean;
   deleting: boolean;
@@ -575,6 +691,9 @@ function CellPopover({
   const [status, setStatus] = useState<ShiftStatus>(shift?.status ?? 'SCHEDULED');
   const [start, setStart] = useState(hm(shift?.startTime) || hm(template?.defaultStart) || '10:00');
   const [end, setEnd] = useState(hm(shift?.endTime) || hm(template?.defaultEnd) || '18:00');
+  const [breakMinutes, setBreakMinutes] = useState(
+    String(shift?.effectiveBreakMinutes ?? template?.breakMinutes ?? breakDefault)
+  );
   const [coveringUserId, setCoveringUserId] = useState('');
 
   const slotLabel = slot === 'M' ? 'Matin' : 'Soir';
@@ -595,6 +714,9 @@ function CellPopover({
       status,
       startTime: status === 'SCHEDULED' ? start : undefined,
       endTime: status === 'SCHEDULED' ? end : undefined,
+      // Any value the backend receives here is treated as an explicit
+      // per-shift override — simpler than detecting whether it was edited.
+      breakMinutes: status === 'SCHEDULED' ? Number(breakMinutes) : undefined,
     });
   }
 
@@ -690,21 +812,42 @@ function CellPopover({
           </div>
 
           {status === 'SCHEDULED' && (
-            <div className="mb-3 flex items-center gap-2">
-              <input
-                type="time"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                className={timeInputClass}
-              />
-              <span className="text-slate-300">–</span>
-              <input
-                type="time"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className={timeInputClass}
-              />
-            </div>
+            <>
+              <div className="mb-3 flex items-center gap-2">
+                <input
+                  type="time"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                  className={timeInputClass}
+                />
+                <span className="text-slate-300">–</span>
+                <input
+                  type="time"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                  className={timeInputClass}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="mb-1 block text-[13px] font-medium text-slate-600">
+                  Break (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={breakMinutes}
+                  onChange={(e) => setBreakMinutes(e.target.value)}
+                  className={timeInputClass}
+                />
+                {template && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Default from template: {template.breakMinutes}min
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
           <div className="flex items-center justify-end gap-2">

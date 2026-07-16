@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "shifts")
@@ -45,6 +46,12 @@ public class Shift {
 
     @Column(name = "end_time")
     private LocalTime endTime;
+
+    @Column(name = "break_minutes")
+    private Integer breakMinutes;
+
+    @Transient
+    private Integer effectiveBreakMinutes;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -128,6 +135,22 @@ public class Shift {
 
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
+    }
+
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
+    }
+
+    public Integer getEffectiveBreakMinutes() {
+        return effectiveBreakMinutes;
+    }
+
+    public void setEffectiveBreakMinutes(Integer effectiveBreakMinutes) {
+        this.effectiveBreakMinutes = effectiveBreakMinutes;
     }
 
     public ShiftStatus getStatus() {

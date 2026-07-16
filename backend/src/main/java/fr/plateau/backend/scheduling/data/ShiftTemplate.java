@@ -82,6 +82,10 @@ public class ShiftTemplate {
         return breakMinutes;
     }
 
+    public void setBreakMinutes(int breakMinutes) {
+        this.breakMinutes = breakMinutes;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
