@@ -180,3 +180,15 @@
   (only exposed pre-login in invite flow) — print header dropped tenant
   name rather than fabricate it. TODO: add GET /api/me/tenant-name
   equivalent for admin role, or reuse existing /api/me/tenant
+
+  ## 2026-07-16 · Scheduling Sprint Day 2: Backend data model + API — DONE
+- New scheduling/ module: schedule_weeks, shift_templates, shifts
+- DRAFT/PUBLISHED week lifecycle: edit-blocked once published (409),
+  unlock via unpublish (OWNER-only, 403 for MANAGER)
+- upsertShift updates in place for assigned users (tenant+user+date+slot),
+  but every OPEN-shift POST inserts fresh — NULL user_id has no matchable
+  identity, MySQL treats multiple NULLs as distinct under unique index.
+  Confirmed intentional, not a bug — multiple open shifts same slot = fine.
+- copyWeek shifts dates by actual day-delta (not hardcoded +7), supports
+  copying any-to-any week, blocked if target already has shifts (409)
+- 9/9 + 2 bonus checks (templates seed, delete-on-draft) all pass
