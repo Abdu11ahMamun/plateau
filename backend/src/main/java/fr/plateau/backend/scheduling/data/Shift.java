@@ -142,8 +142,16 @@ public class Shift {
         return covering;
     }
 
+    public void setCovering(boolean covering) {
+        this.covering = covering;
+    }
+
     public Long getCoveringForUserId() {
         return coveringForUserId;
+    }
+
+    public void setCoveringForUserId(Long coveringForUserId) {
+        this.coveringForUserId = coveringForUserId;
     }
 
     public String getNote() {

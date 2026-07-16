@@ -384,7 +384,8 @@ export function MonthSelector({
   );
 }
 
-function IconBtn({
+// Exported so ReportsPage/SchedulePage's selectors match this one exactly.
+export function IconBtn({
   children,
   onClick,
   title,

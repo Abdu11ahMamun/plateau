@@ -74,6 +74,55 @@ export interface UpdateEmployeeInput {
   role?: Employee['role'];
 }
 
+export type Slot = 'M' | 'S';
+export type ShiftStatus = 'SCHEDULED' | 'DAY_OFF' | 'OPEN' | 'ABSENT';
+export type WeekStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface ScheduleWeek {
+  id: number;
+  weekStartDate: string; // "2026-07-13", always a Monday
+  status: WeekStatus;
+}
+
+export interface Shift {
+  id: number;
+  weekId: number;
+  userId: number | null;
+  shiftDate: string; // "2026-07-13"
+  slot: Slot;
+  startTime: string | null; // "10:00:00"
+  endTime: string | null;
+  status: ShiftStatus;
+  covering: boolean;
+  coveringForUserId: number | null;
+  note: string | null;
+}
+
+export interface WeekWithShifts {
+  week: ScheduleWeek;
+  shifts: Shift[];
+}
+
+export interface UpsertShiftInput {
+  weekStartDate: string;
+  userId?: number;
+  date: string;
+  slot: Slot;
+  startTime?: string; // "HH:mm"
+  endTime?: string;
+  status?: ShiftStatus;
+  note?: string;
+}
+
+export interface ShiftTemplate {
+  id: number;
+  name: string;
+  slot: Slot;
+  defaultStart: string; // "10:00:00"
+  defaultEnd: string;
+  breakMinutes: number;
+}
+
 export interface AuthUser {
   id: number;
   name: string;

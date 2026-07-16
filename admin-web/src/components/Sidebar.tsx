@@ -79,6 +79,20 @@ export default function Sidebar() {
         </NavLink>
 
         <NavLink
+          to="/schedule"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-sage text-white'
+                : 'text-slate-300 hover:bg-white/5'
+            }`
+          }
+        >
+          <CalendarIcon className="h-5 w-5 shrink-0" />
+          Schedule
+        </NavLink>
+
+        <NavLink
           to="/attendance"
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -120,7 +134,6 @@ export default function Sidebar() {
           Employees
         </NavLink>
 
-        <ComingSoonLink label="Plannings" Icon={CalendarIcon} />
         <ComingSoonLink label="Paie" Icon={CashIcon} />
       </nav>
 

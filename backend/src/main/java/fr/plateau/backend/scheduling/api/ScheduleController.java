@@ -100,6 +100,18 @@ public class ScheduleController {
         return toWeekWithShifts(targetWeek, shifts);
     }
 
+    @PostMapping("/shifts/{id}/needs-covering")
+    public Shift markNeedsCovering(@PathVariable Long id) {
+        requireOwnerOrManager();
+        return scheduleService.markNeedsCovering(SecurityUtils.getCurrentTenantId(), id);
+    }
+
+    @PostMapping("/shifts/{id}/assign-coverer")
+    public Shift assignCoverer(@PathVariable Long id, @RequestBody AssignCovererRequest request) {
+        requireOwnerOrManager();
+        return scheduleService.assignCoverer(SecurityUtils.getCurrentTenantId(), id, request.coveringUserId());
+    }
+
     @GetMapping("/templates")
     public List<ShiftTemplate> templates() {
         requireOwnerOrManager();
@@ -134,6 +146,9 @@ public class ScheduleController {
     }
 
     public record CopyRequest(LocalDate sourceWeekStartDate, LocalDate targetWeekStartDate) {
+    }
+
+    public record AssignCovererRequest(Long coveringUserId) {
     }
 
     public record WeekView(Long id, LocalDate weekStartDate, String status) {

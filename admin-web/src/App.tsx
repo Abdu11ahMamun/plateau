@@ -8,6 +8,7 @@ import EmployeesPage from './pages/EmployeesPage';
 import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import ReportsPage from './pages/ReportsPage';
 import ReportsPrintPage from './pages/ReportsPrintPage';
+import SchedulePage from './pages/SchedulePage';
 import { useAuthStore } from './store/auth.store';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -38,6 +39,7 @@ export default function App() {
           }
         >
           <Route index element={<LiveBoardPage />} />
+          <Route path="schedule" element={<SchedulePage />} />
           <Route path="attendance" element={<AttendancePage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="employees/:id" element={<EmployeeDetailPage />} />

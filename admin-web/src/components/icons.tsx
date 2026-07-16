@@ -201,3 +201,19 @@ export function PrinterIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function CopyIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8.25 8.25v-2.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-2.5M6.5 8.25h9a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-9a1.5 1.5 0 0 1-1.5-1.5v-9a1.5 1.5 0 0 1 1.5-1.5Z" />
+    </svg>
+  );
+}
+
+export function LockOpenIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8.25 10.5V6.75a3.75 3.75 0 1 1 7.5 0M6 10.5h12a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V12A1.5 1.5 0 0 1 6 10.5Z" />
+    </svg>
+  );
+}

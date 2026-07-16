@@ -7,7 +7,7 @@ export function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-import { differenceInSeconds, parseISO, format, addMonths } from 'date-fns';
+import { differenceInSeconds, parseISO, format, addMonths, addDays } from 'date-fns';
 
 /** "2026-07" → "July 2026". */
 export function monthLabel(ym: string): string {
@@ -87,6 +87,24 @@ export function joinedDateLabel(iso: string): string {
 /** "2026-07-01" → "1 Jul 2026" (contract start/end dates). */
 export function contractDateLabel(iso: string): string {
   return format(parseISO(iso), 'd MMM yyyy');
+}
+
+/** Shift a "YYYY-MM-DD" date by delta weeks (7-day increments). */
+export function shiftWeek(iso: string, deltaWeeks: number): string {
+  return format(addDays(parseISO(iso), deltaWeeks * 7), 'yyyy-MM-dd');
+}
+
+/** This week's Monday, "YYYY-MM-DD". */
+export function currentWeekMonday(): string {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  return format(addDays(today, diffToMonday), 'yyyy-MM-dd');
+}
+
+/** "HH:mm:ss" or "HH:mm" → "HH:mm"; null → "". */
+export function hm(time: string | null | undefined): string {
+  return time ? time.slice(0, 5) : '';
 }
 
 /** "Monday, 7 July 2026" without pulling in date-fns locales. */

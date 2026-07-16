@@ -192,3 +192,24 @@
 - copyWeek shifts dates by actual day-delta (not hardcoded +7), supports
   copying any-to-any week, blocked if target already has shifts (409)
 - 9/9 + 2 bonus checks (templates seed, delete-on-draft) all pass
+
+## 2026-07-16 · Scheduling Sprint Day 3: React week grid — DONE
+- Locked wire contract via live curl before coding: caught covering
+  (not isCovering) and shiftDate/date asymmetry — both backend quirks,
+  not bugs, now correctly handled client-side
+- Grid: sticky employee column, 7-day × M/S native table, verified
+  sticky survives 375px horizontal scroll
+- Day-off hatch: real CSS repeating-linear-gradient, no image asset
+- New lightweight anchored popover (not ModalShell) — deliberate,
+  for high-frequency click speed vs centered modal overhead
+- Cache patched via setQueryData on save, not full refetch
+- Gap (expected, not a bug): covering-badge UI exists but untestable —
+  no API sets covering=true yet, that's Day 4's job
+
+  ## 2026-07-16 · Scheduling Sprint Day 4a: Shift covering backend — DONE
+- markNeedsCovering: OPEN + remembers coveringForUserId, allowed even
+  on PUBLISHED week (deliberate exception — real-time "called in sick")
+- assignCoverer: 422 if covering-self, 422 if never marked needs-covering
+- Bonus-verified: PUBLISHED-week exception scoped correctly — normal
+  upsertShift still 409s on published, only needs-covering bypasses
+- Extracted shared findShift helper (was inline-duplicated before)

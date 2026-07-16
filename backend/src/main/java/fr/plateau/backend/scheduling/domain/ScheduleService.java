@@ -97,9 +97,7 @@ public class ScheduleService {
 
     @Transactional
     public void deleteShift(Long tenantId, Long shiftId) {
-        Shift shift = shiftRepository.findById(shiftId)
-                .filter(s -> tenantId.equals(s.getTenantId()))
-                .orElseThrow(() -> new NotFoundException("Shift " + shiftId + " not found"));
+        Shift shift = findShift(tenantId, shiftId);
 
         requireDraft(findWeek(tenantId, shift.getWeekId()));
 
@@ -161,6 +159,48 @@ public class ScheduleService {
         }
 
         return shiftsForWeek(tenantId, targetWeek.getId());
+    }
+
+    @Transactional
+    public Shift markNeedsCovering(Long tenantId, Long shiftId) {
+        Shift shift = findShift(tenantId, shiftId);
+
+        // Deliberate exception to the requireDraft() rule used by upsertShift/
+        // deleteShift: marking a shift as needing coverage is a real-time
+        // "someone called in sick" event, not a planning-time edit, so it's
+        // allowed on a PUBLISHED week too. No week-status check here.
+        shift.setCoveringForUserId(shift.getUserId());
+        shift.setUserId(null);
+        shift.setStatus(ShiftStatus.OPEN);
+
+        return shiftRepository.save(shift);
+    }
+
+    @Transactional
+    public Shift assignCoverer(Long tenantId, Long shiftId, Long coveringUserId) {
+        Shift shift = findShift(tenantId, shiftId);
+
+        if (shift.getCoveringForUserId() == null) {
+            throw new UnprocessableEntityException("This shift was not marked as needing coverage");
+        }
+
+        if (coveringUserId.equals(shift.getCoveringForUserId())) {
+            throw new UnprocessableEntityException("Cannot assign the original employee as their own cover");
+        }
+
+        shift.setUserId(coveringUserId);
+        shift.setStatus(ShiftStatus.SCHEDULED);
+        shift.setCovering(true);
+        // coveringForUserId intentionally left as-is: history of who was
+        // originally supposed to work this shift, shown by the admin panel.
+
+        return shiftRepository.save(shift);
+    }
+
+    private Shift findShift(Long tenantId, Long shiftId) {
+        return shiftRepository.findById(shiftId)
+                .filter(s -> tenantId.equals(s.getTenantId()))
+                .orElseThrow(() -> new NotFoundException("Shift " + shiftId + " not found"));
     }
 
     private List<Shift> shiftsForWeek(Long tenantId, Long weekId) {
