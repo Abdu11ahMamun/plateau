@@ -29,19 +29,29 @@ public class EmployeeController {
 
     @GetMapping
     public List<EmployeeView> list() {
-        return employeeService.listEmployees();
+        return employeeService.listEmployees(SecurityUtils.getCurrentTenantId());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EmployeeView create(@Valid @RequestBody CreateEmployeeRequest request) {
-        return employeeService.createEmployee(request.name(), request.phone(), request.email(), request.role());
+        requireOwnerOrManager();
+
+        return employeeService.createEmployee(
+                SecurityUtils.getCurrentTenantId(),
+                request.name(),
+                request.phone(),
+                request.email(),
+                request.role()
+        );
     }
 
     @PostMapping("/{id}/archive")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void archive(@PathVariable Long id) {
-        employeeService.archiveEmployee(id);
+        requireOwnerOrManager();
+
+        employeeService.archiveEmployee(id, SecurityUtils.getCurrentTenantId());
     }
 
     @PutMapping("/{id}")

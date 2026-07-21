@@ -307,3 +307,75 @@
 - Rejection requires a note (422 if blank), approval doesn't
 - isUserOnApprovedLeave() ready but unwired — Schedule integration
   is a separate future task, not done here
+
+  ## 2026-07-17 · Leave Cancel button — RESOLVED, root cause: emulator sleep
+- 3 sessions of investigation, ultimately a false alarm on the code side
+- Root cause: emulator screen sleeps after idle periods; taps after a
+  long wait (setup, rebuild, relaunch) silently don't reach the app —
+  no crash, no log, just zero effect. Looks identical to a hit-test bug.
+- Fix applied going forward: `adb shell settings put system
+  screen_off_timeout 1800000` at the start of any Flutter debugging
+  session with expected idle gaps (login flows, waiting on rebuilds, etc)
+- LESSON for future sessions: if a tap produces literally zero log
+  activity (not even routine EGL_emulation/Choreographer frame noise),
+  suspect screen-sleep/lock BEFORE suspecting the widget tree — check
+  `dumpsys power` wakefulness state first, it's a 5-second check that
+  would have saved 2 of the 3 sessions spent here
+- Leave module cancel flow confirmed working end-to-end, code was
+  correct throughout (both static-analysis rounds were accurate)
+- Note: request id=6 status changed to APPROVED outside this test's
+  visibility — not a regression, just untracked; worth a quick DB
+  glance next session if it matters for demo data cleanliness
+
+  1. Backend: EmployeeController-এর 2টা missing guard        (urgent, live hole)
+2. Backend: EmployeeService-এর hardcoded TENANT_ID          (urgent, tenant leak)
+3. Frontend: route guard + sidebar filter + button role-gate (UX, backend-ই আসল রক্ষা)
+
+
+## 2026-07-17 · Role-security fix — 2 backend holes + full frontend gating
+- EmployeeController: create()/archive() were missing requireOwnerOrManager()
+  (present on update()/resendInvite() in the same file) — added, verified
+  403 where it was 201/204
+- EmployeeService: hardcoded TENANT_ID=1L removed entirely, now flows from
+  SecurityUtils.getCurrentTenantId() via controller param — matches
+  Contract/Schedule/Leave service pattern. Grep-confirmed zero remaining refs.
+- Tenant isolation proven Karim-side (tenant-1 token can't see/archive
+  tenant-2 employee) — couldn't test the reverse direction because of
+  finding below
+- 🔴 NEW FINDING (not fixed, needs own pass): OtpService.findUser() has
+  its OWN hardcoded TENANT_ID=1L — no user outside tenant 1 can even
+  request an OTP or log in. This means the "multi-tenant: Done" status
+  in the Master Plan was incomplete — the hardcoded-tenant pattern was
+  copy-pasted across services before that audit and OtpService was missed.
+  MUST fix before onboarding any 2nd real client.
+- Frontend: RequireAuth extended with role-array + /not-authorized
+  redirect, applied to ALL 6 real pages (agent correctly checked backend
+  guards on Live Board/Attendance too, found same OWNER/MANAGER-only
+  enforcement, included them rather than leaving 2 pages inconsistent)
+- Architectural finding: there is now literally no EMPLOYEE-facing page
+  in admin-web. Lea can log in but lands on "not authorized" everywhere.
+  This is correct given current backend scope, but raises a product
+  question: should EMPLOYEE accounts even have admin-web logins at all,
+  long-term? (Flutter is their actual app.) Not urgent, worth deciding.
+- Known inconsistency (not fixed): MobileNav.tsx is a separate, stale
+  component with an unconditional Live Board tab — doesn't match
+  Sidebar.tsx's nav set at all. Low priority, flagged.
+- Full 21-endpoint regression + positive-path (Karim still works) both
+  re-verified, zero regressions
+
+  ## 2026-07-17 · Multi-tenant fix complete: OtpService — DONE
+- Removed hardcoded TENANT_ID=1L from findUser() — pre-login flow has
+  no JWT yet, so lookup is now unscoped by tenant, resolved by match count
+- 1 match → proceed (unchanged). 0 matches → 404 (unchanged). >1 match
+  (same email across tenants, since uq_tenant_email is per-tenant not
+  global) → 409 "used in more than one organization" — fails loudly
+  rather than silently picking a tenant. Confirmed via migration read,
+  not assumed.
+- Verified: real 2nd tenant OWNER can now requestOtp/verifyOtp, JWT
+  correctly shows tenantId:3 not hardcoded 1. Tenant-1 users unaffected.
+- Side effect: otp_codes has no tenant_id column, but the ambiguity
+  check fires before any OTP row is touched — gap closed incidentally
+- Multi-tenant guard (Master Plan Build 4) now genuinely complete:
+  EmployeeService + OtpService both fixed. Was marked "Done" prematurely
+  before this session — the hardcoded-tenant pattern was copy-pasted
+  across services and only partially caught in the original audit.

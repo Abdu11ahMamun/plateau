@@ -26,7 +26,6 @@ import fr.plateau.backend.employee.data.EmployeeRepository;
 @Service
 public class EmployeeService {
 
-    private static final Long TENANT_ID = 1L;
     private static final Logger log =
             LoggerFactory.getLogger(EmployeeService.class);
 
@@ -45,9 +44,9 @@ public class EmployeeService {
     }
 
     @Transactional(readOnly = true)
-    public List<EmployeeView> listEmployees() {
+    public List<EmployeeView> listEmployees(Long tenantId) {
         List<Employee> employees =
-                employeeRepository.findAllByTenantId(TENANT_ID);
+                employeeRepository.findAllByTenantId(tenantId);
 
         if (employees.isEmpty()) {
             return List.of();
@@ -72,7 +71,7 @@ public class EmployeeService {
                     Contract currentContract = contractService
                             .getCurrentContract(
                                     employee.getId(),
-                                    TENANT_ID
+                                    tenantId
                             )
                             .orElse(null);
 
@@ -87,6 +86,7 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeView createEmployee(
+            Long tenantId,
             String name,
             String phone,
             String email,
@@ -98,7 +98,7 @@ public class EmployeeService {
                         : phone.trim();
 
         Employee employee = new Employee(
-                TENANT_ID,
+                tenantId,
                 name,
                 normalizedPhone,
                 email,
@@ -213,9 +213,9 @@ public class EmployeeService {
     }
 
     @Transactional
-    public void archiveEmployee(Long id) {
+    public void archiveEmployee(Long id, Long tenantId) {
         Employee employee = employeeRepository.findById(id)
-                .filter(e -> TENANT_ID.equals(e.getTenantId()))
+                .filter(e -> tenantId.equals(e.getTenantId()))
                 .orElseThrow(() ->
                         new NotFoundException(
                                 "Employee " + id + " not found"

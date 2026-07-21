@@ -46,10 +46,14 @@ export default function Sidebar() {
 
   const name = user?.name ?? '';
   const role = user?.role ? titleCase(user.role) : '';
+  // Every page in this panel maps to an OWNER/MANAGER-only backend endpoint —
+  // there's no EMPLOYEE-facing surface here yet (see NotAuthorizedPage).
+  const canManage = user?.role === 'OWNER' || user?.role === 'MANAGER';
 
   const { data: leaveRequests } = useQuery({
     queryKey: ['leaveRequests'],
     queryFn: () => getLeaveRequests(),
+    enabled: canManage,
   });
   const pendingLeaveCount =
     leaveRequests?.filter((r) => r.status === 'PENDING').length ?? 0;
@@ -73,103 +77,107 @@ export default function Sidebar() {
       <div className="mx-5 border-t border-white/10" />
 
       <nav className="flex flex-col gap-1 px-3 py-4">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          <BoardIcon className="h-5 w-5 shrink-0" />
-          Live Board
-        </NavLink>
+        {canManage && (
+          <>
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              <BoardIcon className="h-5 w-5 shrink-0" />
+              Live Board
+            </NavLink>
 
-        <NavLink
-          to="/schedule"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          <CalendarIcon className="h-5 w-5 shrink-0" />
-          Schedule
-        </NavLink>
+            <NavLink
+              to="/schedule"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              <CalendarIcon className="h-5 w-5 shrink-0" />
+              Schedule
+            </NavLink>
 
-        <NavLink
-          to="/attendance"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          <ClipboardIcon className="h-5 w-5 shrink-0" />
-          Attendance
-        </NavLink>
+            <NavLink
+              to="/attendance"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              <ClipboardIcon className="h-5 w-5 shrink-0" />
+              Attendance
+            </NavLink>
 
-        <NavLink
-          to="/reports"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          <ReportIcon className="h-5 w-5 shrink-0" />
-          Reports
-        </NavLink>
+            <NavLink
+              to="/reports"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              <ReportIcon className="h-5 w-5 shrink-0" />
+              Reports
+            </NavLink>
 
-        <NavLink
-          to="/employees"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          <UsersIcon className="h-5 w-5 shrink-0" />
-          Employees
-        </NavLink>
+            <NavLink
+              to="/employees"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              <UsersIcon className="h-5 w-5 shrink-0" />
+              Employees
+            </NavLink>
 
-        <NavLink
-          to="/leave"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              isActive
-                ? 'bg-sage text-white'
-                : 'text-slate-300 hover:bg-white/5'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <BriefcaseIcon className="h-5 w-5 shrink-0" />
-              Leave
-              {pendingLeaveCount > 0 && (
-                <span
-                  className={`ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-sage text-white'
-                  }`}
-                >
-                  {pendingLeaveCount}
-                </span>
+            <NavLink
+              to="/leave"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <BriefcaseIcon className="h-5 w-5 shrink-0" />
+                  Leave
+                  {pendingLeaveCount > 0 && (
+                    <span
+                      className={`ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-sage text-white'
+                      }`}
+                    >
+                      {pendingLeaveCount}
+                    </span>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </NavLink>
+            </NavLink>
+          </>
+        )}
 
         <ComingSoonLink label="Paie" Icon={CashIcon} />
       </nav>

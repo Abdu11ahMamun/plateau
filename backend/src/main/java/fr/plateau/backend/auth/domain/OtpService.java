@@ -3,6 +3,7 @@ package fr.plateau.backend.auth.domain;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import fr.plateau.backend.auth.data.OtpCode;
 import fr.plateau.backend.auth.data.OtpCodeRepository;
+import fr.plateau.backend.common.ConflictException;
 import fr.plateau.backend.common.NotFoundException;
 import fr.plateau.backend.common.TooManyRequestsException;
 import fr.plateau.backend.common.UnauthorizedException;
@@ -20,7 +22,6 @@ import fr.plateau.backend.employee.data.EmployeeRepository;
 @Service
 public class OtpService {
 
-    private static final Long TENANT_ID = 1L;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EmployeeRepository employeeRepository;
@@ -105,9 +106,27 @@ public class OtpService {
     }
 
     private Employee findUser(String identifier) {
-        return employeeRepository.findByTenantIdAndEmail(TENANT_ID, identifier)
-                .or(() -> employeeRepository.findByTenantIdAndPhone(TENANT_ID, identifier))
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        // No JWT exists yet at this point in the login flow, so there's no
+        // tenantId to scope by. email/phone are only unique PER TENANT
+        // (uq_tenant_email, uq_tenant_phone) — the same identifier could
+        // legitimately belong to accounts in two different tenants. Rather
+        // than silently picking one (which would risk logging someone into
+        // the wrong tenant), require exactly one match or fail loudly.
+        List<Employee> matches = employeeRepository.findByEmail(identifier);
+        if (matches.isEmpty()) {
+            matches = employeeRepository.findByPhone(identifier);
+        }
+
+        if (matches.isEmpty()) {
+            throw new NotFoundException("Utilisateur introuvable");
+        }
+        if (matches.size() > 1) {
+            throw new ConflictException(
+                    "This identifier is used in more than one organization — contact support"
+            );
+        }
+
+        return matches.get(0);
     }
 
     private String generateCode() {

@@ -10,11 +10,28 @@ import ReportsPage from './pages/ReportsPage';
 import ReportsPrintPage from './pages/ReportsPrintPage';
 import SchedulePage from './pages/SchedulePage';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
+import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import { useAuthStore } from './store/auth.store';
 
-function RequireAuth({ children }: { children: ReactElement }) {
+// Every page in this panel currently maps to a backend endpoint gated to
+// OWNER/MANAGER — there is no EMPLOYEE-facing surface here yet.
+const OWNER_OR_MANAGER = ['OWNER', 'MANAGER'];
+
+function RequireAuth({
+  children,
+  roles,
+}: {
+  children: ReactElement;
+  roles?: string[];
+}) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  const role = useAuthStore((s) => s.user?.role);
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (roles && (!role || !roles.includes(role))) {
+    return <Navigate to="/not-authorized" replace />;
+  }
+  return children;
 }
 
 export default function App() {
@@ -26,7 +43,7 @@ export default function App() {
         <Route
           path="/reports/print"
           element={
-            <RequireAuth>
+            <RequireAuth roles={OWNER_OR_MANAGER}>
               <ReportsPrintPage />
             </RequireAuth>
           }
@@ -39,13 +56,63 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<LiveBoardPage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          <Route path="attendance" element={<AttendancePage />} />
-          <Route path="employees" element={<EmployeesPage />} />
-          <Route path="employees/:id" element={<EmployeeDetailPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="leave" element={<LeaveRequestsPage />} />
+          <Route
+            index
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <LiveBoardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="schedule"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <SchedulePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="attendance"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <AttendancePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="employees"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <EmployeesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="employees/:id"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <EmployeeDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="reports"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <ReportsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="leave"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <LeaveRequestsPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="not-authorized" element={<NotAuthorizedPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
