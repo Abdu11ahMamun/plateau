@@ -1,7 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { ComponentType, SVGProps } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import { initials } from '../lib/format';
+import { getLeaveRequests } from '../api/leave';
 import {
   BoardIcon,
   ClipboardIcon,
@@ -10,6 +12,7 @@ import {
   CalendarIcon,
   CashIcon,
   LogoutIcon,
+  BriefcaseIcon,
 } from './icons';
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -43,6 +46,13 @@ export default function Sidebar() {
 
   const name = user?.name ?? '';
   const role = user?.role ? titleCase(user.role) : '';
+
+  const { data: leaveRequests } = useQuery({
+    queryKey: ['leaveRequests'],
+    queryFn: () => getLeaveRequests(),
+  });
+  const pendingLeaveCount =
+    leaveRequests?.filter((r) => r.status === 'PENDING').length ?? 0;
 
   function handleLogout() {
     clearAuth();
@@ -132,6 +142,33 @@ export default function Sidebar() {
         >
           <UsersIcon className="h-5 w-5 shrink-0" />
           Employees
+        </NavLink>
+
+        <NavLink
+          to="/leave"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              isActive
+                ? 'bg-sage text-white'
+                : 'text-slate-300 hover:bg-white/5'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <BriefcaseIcon className="h-5 w-5 shrink-0" />
+              Leave
+              {pendingLeaveCount > 0 && (
+                <span
+                  className={`ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-sage text-white'
+                  }`}
+                >
+                  {pendingLeaveCount}
+                </span>
+              )}
+            </>
+          )}
         </NavLink>
 
         <ComingSoonLink label="Paie" Icon={CashIcon} />

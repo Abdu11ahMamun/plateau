@@ -163,7 +163,26 @@
       }
     }
   },
+  "leaveTitle": "Leave",
+  "leaveRequestSectionTitle": "Request time off",
+  "leaveRequestButton": "Send request",
+  "leaveFrom": "From",
+  "leaveTo": "To",
+  "leaveHalfDay": "Half day",
+  "leaveReason": "Reason",
+  "leaveReasonHint": "Add a note (optional)",
+  "leaveMyRequests": "My requests",
+  "leaveNoRequests": "No requests yet",
+  "leaveSent": "Request sent",
+  "leaveCancelAction": "Cancel",
+  "leaveCancelConfirm": "Cancel this leave request?",
+  "leaveCancelConfirmAction": "Cancel request",
+  "leaveCancelled": "Cancelled",
+  "leaveStatusPending": "Pending",
+  "leaveStatusApproved": "Approved",
+  "leaveStatusRejected": "Rejected",
   "navHome": "Home",
   "navHours": "My hours",
+  "navLeave": "Leave",
   "navProfile": "Profile"
 }

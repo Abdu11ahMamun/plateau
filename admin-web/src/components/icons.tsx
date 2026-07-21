@@ -210,6 +210,14 @@ export function CopyIcon(props: IconProps) {
   );
 }
 
+export function BriefcaseIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 6.75V5.25a1.5 1.5 0 0 1 1.5-1.5h3a1.5 1.5 0 0 1 1.5 1.5v1.5M4.5 8.25h15A1.5 1.5 0 0 1 21 9.75V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9.75a1.5 1.5 0 0 1 1.5-1.5Zm0 0v.75A1.5 1.5 0 0 0 6 10.5h12a1.5 1.5 0 0 0 1.5-1.5v-.75M9.75 13.5h4.5" />
+    </svg>
+  );
+}
+
 export function LockOpenIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

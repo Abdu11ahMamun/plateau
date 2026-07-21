@@ -8,6 +8,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/hours/screens/my_hours_screen.dart';
+import '../../features/leave/screens/leave_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/punch/data/punch_repository.dart';
 import '../../features/punch/screens/manual_punch_screen.dart';
@@ -65,6 +66,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ManualPunchScreen(),
       ),
       GoRoute(path: '/my-hours', builder: (_, _) => const MyHoursScreen()),
+      GoRoute(path: '/leave', builder: (_, _) => const LeaveScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(
         path: '/punch-result',

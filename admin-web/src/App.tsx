@@ -9,6 +9,7 @@ import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import ReportsPage from './pages/ReportsPage';
 import ReportsPrintPage from './pages/ReportsPrintPage';
 import SchedulePage from './pages/SchedulePage';
+import LeaveRequestsPage from './pages/LeaveRequestsPage';
 import { useAuthStore } from './store/auth.store';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="employees/:id" element={<EmployeeDetailPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="leave" element={<LeaveRequestsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

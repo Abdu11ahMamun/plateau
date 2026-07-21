@@ -150,7 +150,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const PlateauBottomNav(currentIndex: 2),
+      bottomNavigationBar: const PlateauBottomNav(currentIndex: 3),
     );
   }
 }

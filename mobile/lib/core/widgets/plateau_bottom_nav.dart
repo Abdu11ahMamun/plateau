@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../theme/colors.dart';
 
-/// Shared bottom navigation for the three top-level tabs.
+/// Shared bottom navigation for the four top-level tabs.
 class PlateauBottomNav extends StatelessWidget {
   const PlateauBottomNav({super.key, required this.currentIndex});
 
@@ -29,6 +29,8 @@ class PlateauBottomNav extends StatelessWidget {
           case 1:
             context.go('/my-hours');
           case 2:
+            context.go('/leave');
+          case 3:
             context.go('/profile');
         }
       },
@@ -40,6 +42,10 @@ class PlateauBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: const Icon(Icons.access_time),
           label: l10n.navHours,
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.beach_access),
+          label: l10n.navLeave,
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.person),
