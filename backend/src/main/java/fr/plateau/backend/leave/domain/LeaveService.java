@@ -16,20 +16,28 @@ import fr.plateau.backend.leave.data.LeaveRequest;
 import fr.plateau.backend.leave.data.LeaveRequestRepository;
 import fr.plateau.backend.leave.data.LeaveType;
 import fr.plateau.backend.leave.data.LeaveTypeRepository;
+import fr.plateau.backend.scheduling.data.ShiftRepository;
+import fr.plateau.backend.scheduling.domain.ShiftStatus;
 
 @Service
 public class LeaveService {
 
     private final LeaveRequestRepository leaveRequestRepository;
     private final LeaveTypeRepository leaveTypeRepository;
+    private final ShiftRepository shiftRepository;
 
-    public LeaveService(LeaveRequestRepository leaveRequestRepository, LeaveTypeRepository leaveTypeRepository) {
+    public LeaveService(
+            LeaveRequestRepository leaveRequestRepository,
+            LeaveTypeRepository leaveTypeRepository,
+            ShiftRepository shiftRepository
+    ) {
         this.leaveRequestRepository = leaveRequestRepository;
         this.leaveTypeRepository = leaveTypeRepository;
+        this.shiftRepository = shiftRepository;
     }
 
     @Transactional
-    public LeaveRequest createRequest(
+    public CreateOutcome createRequest(
             Long tenantId,
             Long userId,
             Long leaveTypeId,
@@ -63,7 +71,15 @@ public class LeaveService {
         LeaveStatus status = leaveType.isRequiresApproval() ? LeaveStatus.PENDING : LeaveStatus.APPROVED;
 
         LeaveRequest request = new LeaveRequest(tenantId, userId, leaveTypeId, startDate, endDate, halfDay, reason, status);
-        return leaveRequestRepository.save(request);
+        LeaveRequest saved = leaveRequestRepository.save(request);
+
+        // Informational only — does NOT block the request. An owner may have
+        // approved leave for different dates than what was actually scheduled,
+        // so this is surfaced to the frontend, not enforced here.
+        boolean hasScheduledShifts = shiftRepository.findByTenantIdAndShiftDateBetween(tenantId, startDate, endDate).stream()
+                .anyMatch(shift -> userId.equals(shift.getUserId()) && shift.getStatus() == ShiftStatus.SCHEDULED);
+
+        return new CreateOutcome(saved, hasScheduledShifts);
     }
 
     @Transactional(readOnly = true)
@@ -133,5 +149,8 @@ public class LeaveService {
         return leaveRequestRepository.findById(requestId)
                 .filter(r -> tenantId.equals(r.getTenantId()))
                 .orElseThrow(() -> new NotFoundException("Leave request " + requestId + " not found"));
+    }
+
+    public record CreateOutcome(LeaveRequest request, boolean hasScheduledShifts) {
     }
 }

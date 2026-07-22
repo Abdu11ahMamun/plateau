@@ -16,6 +16,7 @@ import fr.plateau.backend.common.ForbiddenException;
 import fr.plateau.backend.common.NotFoundException;
 import fr.plateau.backend.common.TenantSettingsService;
 import fr.plateau.backend.common.UnprocessableEntityException;
+import fr.plateau.backend.leave.domain.LeaveService;
 import fr.plateau.backend.scheduling.data.ScheduleWeek;
 import fr.plateau.backend.scheduling.data.ScheduleWeekRepository;
 import fr.plateau.backend.scheduling.data.Shift;
@@ -30,17 +31,20 @@ public class ScheduleService {
     private final ShiftRepository shiftRepository;
     private final ShiftTemplateRepository shiftTemplateRepository;
     private final TenantSettingsService tenantSettingsService;
+    private final LeaveService leaveService;
 
     public ScheduleService(
             ScheduleWeekRepository scheduleWeekRepository,
             ShiftRepository shiftRepository,
             ShiftTemplateRepository shiftTemplateRepository,
-            TenantSettingsService tenantSettingsService
+            TenantSettingsService tenantSettingsService,
+            LeaveService leaveService
     ) {
         this.scheduleWeekRepository = scheduleWeekRepository;
         this.shiftRepository = shiftRepository;
         this.shiftTemplateRepository = shiftTemplateRepository;
         this.tenantSettingsService = tenantSettingsService;
+        this.leaveService = leaveService;
     }
 
     @Transactional
@@ -58,7 +62,7 @@ public class ScheduleService {
                 .orElseThrow(() -> new NotFoundException("No schedule week found for " + weekStartDate));
 
         return shiftsForWeek(tenantId, week.getId()).stream()
-                .map(shift -> attachEffectiveBreak(tenantId, shift))
+                .map(shift -> attachLeaveConflict(tenantId, attachEffectiveBreak(tenantId, shift)))
                 .toList();
     }
 
@@ -111,7 +115,7 @@ public class ScheduleService {
         // per-shift override.
         shift.setBreakMinutes(breakMinutes);
 
-        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
+        return attachLeaveConflict(tenantId, attachEffectiveBreak(tenantId, shiftRepository.save(shift)));
     }
 
     @Transactional
@@ -182,7 +186,7 @@ public class ScheduleService {
         }
 
         return shiftsForWeek(tenantId, targetWeek.getId()).stream()
-                .map(shift -> attachEffectiveBreak(tenantId, shift))
+                .map(shift -> attachLeaveConflict(tenantId, attachEffectiveBreak(tenantId, shift)))
                 .toList();
     }
 
@@ -198,7 +202,7 @@ public class ScheduleService {
         shift.setUserId(null);
         shift.setStatus(ShiftStatus.OPEN);
 
-        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
+        return attachLeaveConflict(tenantId, attachEffectiveBreak(tenantId, shiftRepository.save(shift)));
     }
 
     @Transactional
@@ -219,7 +223,14 @@ public class ScheduleService {
         // coveringForUserId intentionally left as-is: history of who was
         // originally supposed to work this shift, shown by the admin panel.
 
-        return attachEffectiveBreak(tenantId, shiftRepository.save(shift));
+        return attachLeaveConflict(tenantId, attachEffectiveBreak(tenantId, shiftRepository.save(shift)));
+    }
+
+    private Shift attachLeaveConflict(Long tenantId, Shift shift) {
+        boolean onLeave = shift.getUserId() != null
+                && leaveService.isUserOnApprovedLeave(tenantId, shift.getUserId(), shift.getShiftDate());
+        shift.setOnApprovedLeave(onLeave);
+        return shift;
     }
 
     private Shift attachEffectiveBreak(Long tenantId, Shift shift) {

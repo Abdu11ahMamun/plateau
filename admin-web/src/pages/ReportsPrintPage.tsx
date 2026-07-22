@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getSummary } from '../api/reports';
+import { getMyTenant } from '../api/tenant';
 import { totalHoursLabel, reportRangeLabel, monthEnd } from '../lib/format';
 
 type Lang = 'en' | 'fr';
@@ -58,15 +59,20 @@ export default function ReportsPrintPage() {
     queryKey: ['summary', from, to],
     queryFn: () => getSummary(from, to),
   });
+  const { data: tenant, isLoading: tenantLoading } = useQuery({
+    queryKey: ['myTenant'],
+    queryFn: getMyTenant,
+  });
 
   const rows = data ?? [];
 
-  // Give the table a moment to paint before opening the print dialog.
+  // Give the table a moment to paint before opening the print dialog — wait
+  // for the tenant name too so the header never prints without it.
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || tenantLoading) return;
     const timer = setTimeout(() => window.print(), 300);
     return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, [isLoading, tenantLoading]);
 
   const sumNormal = rows.reduce((s, r) => s + r.normalMinutes, 0);
   const sumOvertime = rows.reduce((s, r) => s + r.overtimeMinutes, 0);
@@ -90,7 +96,7 @@ export default function ReportsPrintPage() {
 
       <header className="mb-6 border-b border-plateau-border pb-4">
         <h1 className="text-xl font-bold text-ink">
-          Plateau — {t.title} — {rangeText}
+          Plateau — {t.title} — {tenant?.tenantName ?? '…'} — {rangeText}
         </h1>
       </header>
 

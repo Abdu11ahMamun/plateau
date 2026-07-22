@@ -39,8 +39,8 @@ public class LeaveController {
 
     @PostMapping("/api/leave/requests")
     @ResponseStatus(HttpStatus.CREATED)
-    public LeaveRequest create(@RequestBody CreateLeaveRequest request) {
-        return leaveService.createRequest(
+    public LeaveRequestCreatedResponse create(@RequestBody CreateLeaveRequest request) {
+        LeaveService.CreateOutcome outcome = leaveService.createRequest(
                 SecurityUtils.getCurrentTenantId(),
                 SecurityUtils.getCurrentUserId(),
                 request.leaveTypeId(),
@@ -49,6 +49,8 @@ public class LeaveController {
                 request.halfDay(),
                 request.reason()
         );
+
+        return new LeaveRequestCreatedResponse(outcome.request(), outcome.hasScheduledShifts());
     }
 
     @GetMapping("/api/leave/requests/me")

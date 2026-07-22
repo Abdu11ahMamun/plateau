@@ -53,6 +53,9 @@ public class Shift {
     @Transient
     private Integer effectiveBreakMinutes;
 
+    @Transient
+    private boolean onApprovedLeave;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ShiftStatus status;
@@ -151,6 +154,14 @@ public class Shift {
 
     public void setEffectiveBreakMinutes(Integer effectiveBreakMinutes) {
         this.effectiveBreakMinutes = effectiveBreakMinutes;
+    }
+
+    public boolean isOnApprovedLeave() {
+        return onApprovedLeave;
+    }
+
+    public void setOnApprovedLeave(boolean onApprovedLeave) {
+        this.onApprovedLeave = onApprovedLeave;
     }
 
     public ShiftStatus getStatus() {
