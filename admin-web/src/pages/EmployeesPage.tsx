@@ -11,6 +11,7 @@ import {
 } from '../api/employees';
 import type { Employee, CreateEmployeeInput } from '../types/api.types';
 import { initials, shortDateLabel, joinedDateLabel, todayLabel } from '../lib/format';
+import { getEmployeeColor } from '../lib/employeeColor';
 import { Select, Pill } from './AttendancePage';
 import {
   UsersIcon,
@@ -319,7 +320,10 @@ function Row({
       {/* Employee */}
       <td className="px-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-sage-700">
+          <span
+            style={{ backgroundColor: getEmployeeColor(employee.id) }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+          >
             {initials(employee.name)}
           </span>
           <div className="min-w-0">

@@ -9,6 +9,7 @@ import {
   clockInTime,
   todayLabel,
 } from '../lib/format';
+import { getEmployeeColor } from '../lib/employeeColor';
 import { ClockIcon, RefreshIcon } from '../components/icons';
 
 export default function LiveBoardPage() {
@@ -189,7 +190,10 @@ function EmployeeCard({ entry, now }: { entry: LiveBoardEntry; now: Date }) {
 
   return (
     <div className="flex items-center gap-4 rounded-xl border-l-4 border-sage bg-white p-4 shadow-sm transition-all duration-150 hover:scale-[1.01] hover:shadow-lg">
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sage text-sm font-bold text-white">
+      <span
+        style={{ backgroundColor: getEmployeeColor(entry.userId) }}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+      >
         {initials(entry.name)}
       </span>
 

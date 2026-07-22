@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import { isAxiosError } from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -34,6 +35,7 @@ import {
   hm,
   todayLabel,
 } from '../lib/format';
+import { getEmployeeColor, getEmployeeColorLight } from '../lib/employeeColor';
 import { IconBtn } from './AttendancePage';
 import { SelectInput } from './EmployeesPage';
 import {
@@ -45,6 +47,7 @@ import {
 } from '../components/icons';
 
 const SLOTS: Slot[] = ['M', 'S'];
+type ViewMode = 'grid' | 'timeline';
 
 /** Shift a "YYYY-MM-DD" date by a number of days (not weeks). */
 function shiftDay(iso: string, days: number): string {
@@ -59,6 +62,7 @@ export default function SchedulePage() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
   const [weekStart, setWeekStart] = useState(() => currentWeekMonday());
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [popover, setPopover] = useState<{
     employee: Employee;
     date: string;
@@ -102,6 +106,18 @@ export default function SchedulePage() {
   const week = data?.week;
   const shifts = useMemo(() => data?.shifts ?? [], [data]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => shiftDay(weekStart, i)), [weekStart]);
+
+  // Timeline's selected day — default to today if it's in the viewed week,
+  // else the first day. Re-derived whenever the viewed week changes.
+  const [timelineDay, setTimelineDay] = useState(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return days.includes(today) ? today : days[0];
+  });
+  useEffect(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setTimelineDay(days.includes(today) ? today : days[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart]);
 
   const shiftsByKey = useMemo(() => {
     const map = new Map<string, Shift>();
@@ -282,6 +298,8 @@ export default function SchedulePage() {
         <div className="flex flex-wrap items-center gap-2">
           <WeekSelector weekStart={weekStart} onChange={setWeekStart} />
 
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+
           <button
             type="button"
             onClick={handleCopyLastWeek}
@@ -330,7 +348,28 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Grid */}
+      {viewMode === 'timeline' && (
+        <DayTabs days={days} selected={timelineDay} onSelect={setTimelineDay} />
+      )}
+
+      {viewMode === 'timeline' ? (
+        isLoading ? (
+          <div className="overflow-hidden rounded-xl border border-plateau-border bg-white shadow-sm">
+            <GridSkeleton />
+          </div>
+        ) : (
+          <>
+            <TimelineView
+              day={timelineDay}
+              employees={employees}
+              employeeNameById={employeeNameById}
+              shiftsByKey={shiftsByKey}
+              onBarClick={openPopover}
+            />
+            <TimelineLegend />
+          </>
+        )
+      ) : (
       <div className="overflow-hidden rounded-xl border border-plateau-border bg-white shadow-sm">
         <div className="overflow-x-auto">
           {isLoading ? (
@@ -382,7 +421,10 @@ export default function SchedulePage() {
                     <tr key={employee.id} className="border-b border-plateau-border/60 last:border-0">
                       <td className="sticky left-0 z-10 border-r border-plateau-border bg-white px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage-100 text-[10px] font-semibold text-sage-700">
+                          <span
+                            style={{ backgroundColor: getEmployeeColor(employee.id) }}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                          >
                             {initials(employee.name)}
                           </span>
                           <span className="truncate text-sm font-medium text-ink">
@@ -413,6 +455,7 @@ export default function SchedulePage() {
           )}
         </div>
       </div>
+      )}
 
       {popover && (
         <>
@@ -470,6 +513,60 @@ export function WeekSelector({
       <IconBtn title="Next week" onClick={() => onChange(shiftWeek(weekStart, 1))}>
         <ChevronRightIcon className="h-4 w-4" />
       </IconBtn>
+    </div>
+  );
+}
+
+function ViewModeToggle({
+  value,
+  onChange,
+}: {
+  value: ViewMode;
+  onChange: (v: ViewMode) => void;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-lg border border-plateau-border bg-white p-0.5">
+      {(['grid', 'timeline'] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition ${
+            value === mode ? 'bg-sage text-white' : 'text-slate-500 hover:bg-mist'
+          }`}
+        >
+          {mode}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DayTabs({
+  days,
+  selected,
+  onSelect,
+}: {
+  days: string[];
+  selected: string;
+  onSelect: (day: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {days.map((d) => (
+        <button
+          key={d}
+          type="button"
+          onClick={() => onSelect(d)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            d === selected
+              ? 'bg-sage text-white'
+              : 'border border-plateau-border bg-white text-slate-600 hover:bg-mist'
+          }`}
+        >
+          {attendanceDateLabel(d)}
+        </button>
+      ))}
     </div>
   );
 }
@@ -562,6 +659,330 @@ const DAY_OFF_HATCH = {
     'repeating-linear-gradient(45deg, rgba(45,53,97,0.12) 0, rgba(45,53,97,0.12) 2px, transparent 2px, transparent 9px)',
 };
 
+// ── Timeline (Gantt) layout constants ───────────────────────────────────
+// Wide enough for the longest real name in this tenant ("Flutter Test
+// User 2/3", 19 chars) plus the color dot, without eating too much of the
+// track — verified empirically, not just estimated (see Fix 2 in the PR).
+const TIMELINE_LABEL_WIDTH = 220;
+const PX_PER_MIN = 2; // 120px/hour — comfortably above the 60-80px/hour floor
+const HOUR_TICK_INTERVAL = 120; // minutes between axis labels
+const AXIS_END_PADDING = 40; // room for the last axis label so it can't clip
+const DEFAULT_RANGE_START_MIN = 8 * 60; // 08:00 fallback when no shifts exist
+const DEFAULT_RANGE_END_MIN = 24 * 60; // 24:00 fallback
+const MIN_BAR_WIDTH = 28;
+const MIN_TEXT_BAR_WIDTH = 60; // below this, in-bar time text is dropped in favor of the tooltip
+const GRIDLINE_COLOR = 'rgba(226,224,216,0.7)'; // plateau-border at low opacity
+
+/** "HH:mm" or "HH:mm:ss" -> minutes since midnight. */
+function toMinutes(time: string | null): number | null {
+  if (!time) return null;
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** 90 -> "6am"; 720 -> "12pm" — matches the app's compact axis-label style. */
+function formatHourMark(minutes: number): string {
+  const total = ((minutes % 1440) + 1440) % 1440;
+  const h24 = Math.floor(total / 60);
+  const period = h24 < 12 ? 'am' : 'pm';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}${period}`;
+}
+
+type BarClickHandler = (
+  e: React.MouseEvent,
+  employee: Employee,
+  date: string,
+  slot: Slot,
+  shift: Shift | undefined
+) => void;
+
+function TimelineView({
+  day,
+  employees,
+  employeeNameById,
+  shiftsByKey,
+  onBarClick,
+}: {
+  day: string;
+  employees: Employee[];
+  employeeNameById: Map<number, string>;
+  shiftsByKey: Map<string, Shift>;
+  onBarClick: BarClickHandler;
+}) {
+  // Every SCHEDULED shift on this day, across all employees/slots — drives
+  // the dynamic axis range. DAY_OFF/ABSENT/OPEN have no time range to plot.
+  const scheduledToday = useMemo(() => {
+    const list: { startMin: number; endMin: number }[] = [];
+    for (const employee of employees) {
+      for (const slot of SLOTS) {
+        const shift = shiftsByKey.get(shiftKey(employee.id, day, slot));
+        if (!shift || shift.status !== 'SCHEDULED') continue;
+        const startMin = toMinutes(shift.startTime);
+        const endMinRaw = toMinutes(shift.endTime);
+        if (startMin == null || endMinRaw == null) continue;
+        const endMin = endMinRaw <= startMin ? 24 * 60 : Math.min(endMinRaw, 24 * 60);
+        list.push({ startMin, endMin });
+      }
+    }
+    return list;
+  }, [employees, shiftsByKey, day]);
+
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    if (scheduledToday.length === 0) {
+      return { rangeStart: DEFAULT_RANGE_START_MIN, rangeEnd: DEFAULT_RANGE_END_MIN };
+    }
+    const starts = scheduledToday.map((s) => s.startMin);
+    const ends = scheduledToday.map((s) => s.endMin);
+    return {
+      rangeStart: Math.max(0, Math.min(...starts) - 60),
+      rangeEnd: Math.min(24 * 60, Math.max(...ends) + 60),
+    };
+  }, [scheduledToday]);
+
+  const totalMinutes = Math.max(60, rangeEnd - rangeStart);
+  // Trailing padding so the last axis label has room to render without its
+  // text bleeding past the scrollable content's own width (which is how it
+  // was getting clipped and unreachable-by-scroll before this fix).
+  const trackWidth = totalMinutes * PX_PER_MIN + AXIS_END_PADDING;
+
+  const ticks = useMemo(() => {
+    const marks: { min: number; label: string }[] = [];
+    const first = Math.ceil(rangeStart / HOUR_TICK_INTERVAL) * HOUR_TICK_INTERVAL;
+    for (let m = first; m <= rangeEnd; m += HOUR_TICK_INTERVAL) {
+      marks.push({ min: m, label: formatHourMark(m) });
+    }
+    return marks;
+  }, [rangeStart, rangeEnd]);
+
+  // Gridlines are phase-aligned to the first tick (not to pixel 0 of the
+  // track) so the faint vertical lines actually line up with the hour
+  // labels above them instead of drifting out of sync with them.
+  const gridlineStyle: React.CSSProperties = {
+    backgroundImage: `repeating-linear-gradient(to right, ${GRIDLINE_COLOR} 0, ${GRIDLINE_COLOR} 1px, transparent 1px, transparent ${
+      HOUR_TICK_INTERVAL * PX_PER_MIN
+    }px)`,
+    backgroundPositionX: ticks.length > 0 ? (ticks[0].min - rangeStart) * PX_PER_MIN : 0,
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-plateau-border bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <div style={{ width: TIMELINE_LABEL_WIDTH + trackWidth }}>
+          <div className="flex border-b border-plateau-border bg-mist/60">
+            <div
+              className="sticky left-0 z-20 shrink-0 border-r border-plateau-border bg-mist"
+              style={{ width: TIMELINE_LABEL_WIDTH }}
+            />
+            <div className="relative shrink-0" style={{ width: trackWidth, height: 32 }}>
+              {/* Left-aligned (not centered) on purpose — a centered label at
+                  min or max range would bleed past the track's declared
+                  width and get clipped with no way to scroll to the rest. */}
+              {ticks.map((t) => (
+                <span
+                  key={t.min}
+                  className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-slate-400"
+                  style={{ left: (t.min - rangeStart) * PX_PER_MIN + 4 }}
+                >
+                  {t.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {employees.length === 0 ? (
+            <div className="px-5 py-16 text-center text-sm text-slate-400">
+              No active employees to schedule.
+            </div>
+          ) : (
+            employees.map((employee) => (
+              <TimelineRow
+                key={employee.id}
+                employee={employee}
+                employeeNameById={employeeNameById}
+                day={day}
+                shiftsByKey={shiftsByKey}
+                rangeStart={rangeStart}
+                trackWidth={trackWidth}
+                gridlineStyle={gridlineStyle}
+                onBarClick={onBarClick}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineRow({
+  employee,
+  employeeNameById,
+  day,
+  shiftsByKey,
+  rangeStart,
+  trackWidth,
+  gridlineStyle,
+  onBarClick,
+}: {
+  employee: Employee;
+  employeeNameById: Map<number, string>;
+  day: string;
+  shiftsByKey: Map<string, Shift>;
+  rangeStart: number;
+  trackWidth: number;
+  gridlineStyle: React.CSSProperties;
+  onBarClick: BarClickHandler;
+}) {
+  const bars = SLOTS.map((slot) => shiftsByKey.get(shiftKey(employee.id, day, slot))).filter(
+    (shift): shift is Shift =>
+      Boolean(shift) && shift!.status === 'SCHEDULED' && Boolean(shift!.startTime) && Boolean(shift!.endTime)
+  );
+
+  return (
+    <div className="flex border-b border-plateau-border/60 last:border-0">
+      <div
+        className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r border-plateau-border bg-white px-4 py-2"
+        style={{ width: TIMELINE_LABEL_WIDTH }}
+      >
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: getEmployeeColor(employee.id) }}
+        />
+        {/* title is a safety net for any name longer than the widened
+            column comfortably fits — never truncate with no way to see it. */}
+        <span className="truncate text-sm font-medium text-ink" title={employee.name}>
+          {employee.name}
+        </span>
+      </div>
+      <div className="relative shrink-0" style={{ width: trackWidth, height: 56, ...gridlineStyle }}>
+        {bars.map((shift) => (
+          <TimelineBar
+            key={shift.slot}
+            employee={employee}
+            employeeNameById={employeeNameById}
+            day={day}
+            shift={shift}
+            rangeStart={rangeStart}
+            onBarClick={onBarClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TimelineBar({
+  employee,
+  employeeNameById,
+  day,
+  shift,
+  rangeStart,
+  onBarClick,
+}: {
+  employee: Employee;
+  employeeNameById: Map<number, string>;
+  day: string;
+  shift: Shift;
+  rangeStart: number;
+  onBarClick: BarClickHandler;
+}) {
+  const startMin = toMinutes(shift.startTime)!;
+  const endMinRaw = toMinutes(shift.endTime)!;
+  const endMin = endMinRaw <= startMin ? 24 * 60 : Math.min(endMinRaw, 24 * 60);
+  const left = (startMin - rangeStart) * PX_PER_MIN;
+  const width = Math.max(MIN_BAR_WIDTH, (endMin - startMin) * PX_PER_MIN);
+  const color = getEmployeeColor(employee.id);
+  const lightColor = getEmployeeColorLight(employee.id);
+
+  // The backend only stores a break duration, not when in the shift it
+  // falls, so this notch is an illustrative midpoint marker, not exact.
+  const breakWidth =
+    shift.effectiveBreakMinutes > 0
+      ? Math.max(3, Math.min(shift.effectiveBreakMinutes * PX_PER_MIN, width * 0.2))
+      : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => onBarClick(e, employee, day, shift.slot, shift)}
+      title={`${employee.name} · ${hm(shift.startTime)}-${hm(shift.endTime)}`}
+      style={{ left, width, top: 10, height: 36, backgroundColor: color }}
+      className="absolute flex items-center justify-center rounded-md shadow-sm transition hover:brightness-95"
+    >
+      {breakWidth > 0 && (
+        <span
+          title={`Break — ${shift.effectiveBreakMinutes} min`}
+          className="absolute top-0 h-full cursor-help border-x border-white/70"
+          style={{
+            left: `calc(50% - ${breakWidth / 2}px)`,
+            width: breakWidth,
+            backgroundColor: lightColor,
+            opacity: 0.85,
+          }}
+        />
+      )}
+      {width >= MIN_TEXT_BAR_WIDTH && (
+        <span className="truncate px-2 font-mono text-[11px] font-medium text-white">
+          {hm(shift.startTime)}-{hm(shift.endTime)}
+        </span>
+      )}
+      {shift.onApprovedLeave && <LeaveConflictBadge className="absolute left-0.5 top-0.5" />}
+      {shift.covering && (
+        <span
+          title={
+            shift.coveringForUserId != null
+              ? `Covering for ${employeeNameById.get(shift.coveringForUserId) ?? 'another employee'}`
+              : 'Covering'
+          }
+          className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-sage text-[8px] leading-none text-white ring-2 ring-white"
+        >
+          ↔
+        </span>
+      )}
+    </button>
+  );
+}
+
+// A single unobtrusive row explaining Timeline's non-obvious visual signals
+// (color itself needs no legend — it's just identity, tied to the name
+// right next to it). Kept to icon+label pairs, no collapse toggle: three
+// short items don't add enough visual noise to justify that complexity.
+function TimelineLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-1 text-xs text-slate-500">
+      <span className="flex items-center gap-1.5">
+        <span className="h-3.5 w-2 rounded-sm border-x border-white/70 bg-slate-300" />
+        Break
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-sage text-[8px] leading-none text-white">
+          ↔
+        </span>
+        Covering another shift
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber text-[9px] font-bold leading-none text-white">
+          !
+        </span>
+        Approved-leave conflict
+      </span>
+    </div>
+  );
+}
+
+// Exported so Timeline can show the exact same conflict indicator on a bar.
+export function LeaveConflictBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      title="This employee has approved leave that overlaps this shift"
+      className={`flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber text-[9px] font-bold leading-none text-white ring-2 ring-white ${className}`}
+    >
+      !
+    </span>
+  );
+}
+
 function Cell({
   shift,
   employeeNameById,
@@ -614,6 +1035,7 @@ function Cell({
       className={`group relative flex h-14 w-[78px] items-center justify-center transition ${bgClass}`}
     >
       {content}
+      {shift?.onApprovedLeave && <LeaveConflictBadge className="absolute left-0.5 top-0.5" />}
       {shift?.covering && (
         <span
           title={

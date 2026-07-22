@@ -97,6 +97,7 @@ export interface Shift {
   status: ShiftStatus;
   covering: boolean;
   coveringForUserId: number | null;
+  onApprovedLeave: boolean;
   note: string | null;
 }
 

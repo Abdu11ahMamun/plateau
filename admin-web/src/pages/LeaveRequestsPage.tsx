@@ -10,6 +10,7 @@ import {
 import type { LeaveRequest, LeaveStatus } from '../api/leave';
 import { getEmployees } from '../api/employees';
 import { initials, contractDateLabel, shortDateLabel, todayLabel } from '../lib/format';
+import { getEmployeeColor } from '../lib/employeeColor';
 import { EmptyState } from './AttendancePage';
 import { BriefcaseIcon } from '../components/icons';
 
@@ -267,7 +268,10 @@ function Row({
     <tr className="border-b border-plateau-border/60 align-top transition-colors duration-100 last:border-0 hover:bg-mist">
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-sage-700">
+          <span
+            style={{ backgroundColor: getEmployeeColor(request.userId) }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+          >
             {initials(employeeName)}
           </span>
           <span className="truncate text-sm font-medium text-ink">{employeeName}</span>

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { getSummary } from '../api/reports';
 import type { MonthlySummaryRow } from '../types/api.types';
+import { getEmployeeColor } from '../lib/employeeColor';
 import {
   initials,
   totalHoursLabel,
@@ -345,7 +346,10 @@ function Row({ row }: { row: MonthlySummaryRow }) {
     <tr className="h-14 border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist">
       <td className="px-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-sage-700">
+          <span
+            style={{ backgroundColor: getEmployeeColor(row.employeeId) }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+          >
             {initials(row.name)}
           </span>
           <span className="truncate text-sm font-medium text-ink">

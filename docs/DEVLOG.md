@@ -379,3 +379,51 @@
   EmployeeService + OtpService both fixed. Was marked "Done" prematurely
   before this session — the hardcoded-tenant pattern was copy-pasted
   across services and only partially caught in the original audit.
+
+  ১. getEmployeeColor(employeeId) — deterministic color palette
+   প্রতিটা employee-র জন্য সবসময় একই রং (id হ্যাশ করে palette থেকে বেছে নেওয়া)
+   ব্যবহার হবে: avatar, Schedule grid accent, Timeline bar fill
+
+২. Schedule-এ নতুন "Timeline" view (Grid view-এর পাশে toggle)
+   - Grid view: এখনকার click-to-fill (অপরিবর্তিত, data entry-র জন্য)
+   - Timeline view: একদিনের horizontal Gantt — employee সারি,
+     সময়-অক্ষ (৬টা সকাল থেকে যতক্ষণ শেষ shift), প্রতিটা shift
+     employee-র নিজস্ব রঙে bar হিসেবে, বার length = duration
+   - Bar click করলে একই edit popover খোলে যেটা Grid-এ আছে
+     (নতুন কিছু বানাতে হবে না, reuse)
+
+
+    ## 2026-07-22 · Employee colors + Schedule Timeline view — DONE
+- 🐛 Fixed before shipping: naive palette[id % 8] collided for IDs 8
+  apart (Karim id=1, Abdullah id=9 → same color, reproducing the exact
+  client complaint). Replaced with integer-avalanche hash, seed tuned
+  so current 6 active employees are all distinct. 8-color palette has
+  a hard ceiling — >8 active employees will eventually collide, this
+  is a known limit, not a bug, worth revisiting if roster grows.
+- Gap found: brief assumed Grid's leave-conflict badge was already
+  wired (it wasn't — backend field existed, frontend Shift type and
+  Cell render never used it). Built LeaveConflictBadge once, Grid and
+  Timeline both import the same component — one source of truth.
+- Timeline view: per-employee colored bars, positioned/sized by real
+  start/end time, dynamic hour-axis range (not hardcoded), reuses
+  Grid's exact CellPopover for editing (no duplicate edit logic)
+- Scope calls (explicit, not silent): only SCHEDULED shifts get bars
+  (DAY_OFF/ABSENT/OPEN show empty track); break notch is a cosmetic
+  midpoint marker since backend only stores duration, not position
+  within the shift; Timeline is view-only for creation (use Grid to add)
+- Employee colors now consistent across Employees/LiveBoard/Attendance/
+  Schedule — addresses both pieces of demo-2 feedback in one pass
+
+
+  ## 2026-07-22 · Timeline UX polish — DONE, 3 root-cause fixes
+- Hour axis: translate-x-1/2 centering caused edge-tick label bleed
+  outside scrollWidth (permanently unreachable, not just visually
+  clipped). Fixed via left-align + trailing padding. Bonus: gridlines
+  were phase-misaligned to pixel-0 not to actual tick positions — fixed.
+- Name column: widened 176→220px based on real longest name (19 chars),
+  title-attribute fallback kept as free insurance regardless
+- Break notch: root cause was pointer-events-none explicitly blocking
+  all hover — not a missing tooltip mechanism. One-line fix once found.
+- Added: 60px width floor drops in-bar text for very short shifts
+  (relies on tooltip instead), non-collapsible 3-item legend
+  (judged collapse toggle = more UI than content it hides)

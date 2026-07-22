@@ -41,6 +41,7 @@ import {
   durationLabel,
   totalHoursLabel,
 } from '../lib/format';
+import { getEmployeeColor } from '../lib/employeeColor';
 import {
   PlusIcon,
   ChevronRightIcon,
@@ -98,7 +99,10 @@ function Header({ employee }: { employee: Employee }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sage-100 text-lg font-semibold text-sage-700">
+        <span
+          style={{ backgroundColor: getEmployeeColor(employee.id) }}
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-white"
+        >
           {initials(employee.name)}
         </span>
         <div className="min-w-0">

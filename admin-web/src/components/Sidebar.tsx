@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ComponentType, SVGProps } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import { initials } from '../lib/format';
+import { getEmployeeColor } from '../lib/employeeColor';
 import { getLeaveRequests } from '../api/leave';
 import {
   BoardIcon,
@@ -67,9 +68,7 @@ export default function Sidebar() {
     <aside className="flex w-56 flex-col bg-ink text-white">
       <div className="px-5 py-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-sage text-sm font-bold text-white">
-            P
-          </span>
+          <img src="/plateau-logo.png" alt="Plateau" className="h-6 w-6 rounded-md object-cover" />
           <span className="text-xl font-bold">Plateau</span>
         </div>
       </div>
@@ -185,7 +184,10 @@ export default function Sidebar() {
       <div className="mt-auto">
         <div className="mx-5 border-t border-white/10" />
         <div className="flex items-center gap-3 px-5 py-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage text-xs font-bold text-white">
+          <span
+            style={user?.id != null ? { backgroundColor: getEmployeeColor(user.id) } : undefined}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage text-xs font-bold text-white"
+          >
             {initials(name)}
           </span>
           <div className="min-w-0 flex-1">
