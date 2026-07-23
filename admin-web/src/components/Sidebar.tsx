@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth.store';
 import { initials } from '../lib/format';
 import { getEmployeeColor } from '../lib/employeeColor';
 import { getLeaveRequests } from '../api/leave';
+import { getFlags } from '../api/flags';
 import {
   BoardIcon,
   ClipboardIcon,
@@ -14,6 +15,7 @@ import {
   CashIcon,
   LogoutIcon,
   BriefcaseIcon,
+  FlagIcon,
 } from './icons';
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -58,6 +60,13 @@ export default function Sidebar() {
   });
   const pendingLeaveCount =
     leaveRequests?.filter((r) => r.status === 'PENDING').length ?? 0;
+
+  const { data: flags } = useQuery({
+    queryKey: ['flags'],
+    queryFn: () => getFlags(),
+    enabled: canManage,
+  });
+  const unresolvedFlagCount = flags?.filter((f) => f.resolution === null).length ?? 0;
 
   function handleLogout() {
     clearAuth();
@@ -119,6 +128,33 @@ export default function Sidebar() {
             >
               <ClipboardIcon className="h-5 w-5 shrink-0" />
               Attendance
+            </NavLink>
+
+            <NavLink
+              to="/flags"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <FlagIcon className="h-5 w-5 shrink-0" />
+                  Flags
+                  {unresolvedFlagCount > 0 && (
+                    <span
+                      className={`ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-amber text-white'
+                      }`}
+                    >
+                      {unresolvedFlagCount}
+                    </span>
+                  )}
+                </>
+              )}
             </NavLink>
 
             <NavLink

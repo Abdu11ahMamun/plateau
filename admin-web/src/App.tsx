@@ -10,6 +10,7 @@ import ReportsPage from './pages/ReportsPage';
 import ReportsPrintPage from './pages/ReportsPrintPage';
 import SchedulePage from './pages/SchedulePage';
 import LeaveRequestsPage from './pages/LeaveRequestsPage';
+import FlagsPage from './pages/FlagsPage';
 import NotAuthorizedPage from './pages/NotAuthorizedPage';
 import { useAuthStore } from './store/auth.store';
 
@@ -77,6 +78,14 @@ export default function App() {
             element={
               <RequireAuth roles={OWNER_OR_MANAGER}>
                 <AttendancePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="flags"
+            element={
+              <RequireAuth roles={OWNER_OR_MANAGER}>
+                <FlagsPage />
               </RequireAuth>
             }
           />

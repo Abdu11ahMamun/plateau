@@ -1,9 +1,7 @@
 package fr.plateau.backend.timeclock.api;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -22,25 +20,25 @@ import fr.plateau.backend.timeclock.data.Session;
 import fr.plateau.backend.timeclock.data.SessionRepository;
 import fr.plateau.backend.timeclock.data.TimeEvent;
 import fr.plateau.backend.timeclock.data.TimeEventRepository;
+import fr.plateau.backend.timeclock.domain.CorrectionService;
 
 @RestController
 @RequestMapping("/api/admin/attendance")
 public class AttendanceController {
 
-    // No tenant-timezone field exists yet; format wall-clock times in the
-    // server's zone so they match the rest of the app on this deployment.
-    private static final ZoneId TENANT_ZONE = ZoneId.systemDefault();
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final SessionRepository sessionRepository;
     private final TimeEventRepository timeEventRepository;
     private final EmployeeRepository employeeRepository;
+    private final CorrectionService correctionService;
 
     public AttendanceController(SessionRepository sessionRepository, TimeEventRepository timeEventRepository,
-            EmployeeRepository employeeRepository) {
+            EmployeeRepository employeeRepository, CorrectionService correctionService) {
         this.sessionRepository = sessionRepository;
         this.timeEventRepository = timeEventRepository;
         this.employeeRepository = employeeRepository;
+        this.correctionService = correctionService;
     }
 
     @GetMapping
@@ -62,43 +60,41 @@ public class AttendanceController {
         LocalDate end = ym.plusMonths(1).atDay(1);
 
         return sessionRepository.findByMonth(tenantId, start, end).stream()
-                .map(this::toRow)
+                .map(session -> toRow(tenantId, session))
                 // date DESC, then clock-in ASC within the day.
                 .sorted(Comparator.comparing(AttendanceRow::date).reversed()
                         .thenComparing(AttendanceRow::clockIn))
                 .toList();
     }
 
-    private AttendanceRow toRow(Session session) {
+    private AttendanceRow toRow(Long tenantId, Session session) {
         TimeEvent in = timeEventRepository.findById(session.getInEventId()).orElse(null);
-        TimeEvent out = session.getOutEventId() == null
-                ? null
-                : timeEventRepository.findById(session.getOutEventId()).orElse(null);
         Employee employee = employeeRepository.findById(session.getUserId()).orElse(null);
+        CorrectionService.EffectiveTimes effective = correctionService.resolveEffectiveTimes(tenantId, session);
 
         String name = employee != null ? employee.getName() : "Unknown";
-        String clockIn = in != null ? formatTime(in.getEventTime()) : null;
-        String clockOut = out != null ? formatTime(out.getEventTime()) : null;
+        String clockIn = effective.clockIn() != null ? effective.clockIn().format(HH_MM) : null;
+        String clockOut = effective.clockOut() != null ? effective.clockOut().format(HH_MM) : null;
         String method = in != null ? in.getMethod().name() : null;
         String status = session.getStatus().name();
+        Integer durationMinutes = correctionService.resolveEffectiveMinutes(tenantId, session);
 
         return new AttendanceRow(
+                session.getId(),
                 session.getUserId(),
                 name,
                 session.getWorkDate().toString(), // ISO yyyy-MM-dd
                 clockIn,
                 clockOut,
-                session.getMinutesTotal(),
+                durationMinutes,
                 method,
                 status,
-                !"AUTO".equals(status));
-    }
-
-    private static String formatTime(Instant instant) {
-        return instant.atZone(TENANT_ZONE).toLocalTime().format(HH_MM);
+                !"AUTO".equals(status),
+                effective.hasCorrection());
     }
 
     public record AttendanceRow(
+            Long sessionId,
             Long userId,
             String name,
             String date,
@@ -107,6 +103,7 @@ public class AttendanceController {
             Integer durationMinutes,
             String method,
             String status,
-            boolean flagged) {
+            boolean flagged,
+            boolean hasCorrection) {
     }
 }

@@ -7,15 +7,32 @@ export interface LiveBoardEntry {
 }
 
 export interface AttendanceRow {
+  // NOTE: not yet returned by GET /api/admin/attendance as of this writing —
+  // the backend track is adding it. Row-level correct/history actions in
+  // AttendancePage depend on this field being present.
+  sessionId: number;
   userId: number;
   name: string;
   date: string; // "2026-07-07"
-  clockIn: string | null; // "09:02"
+  clockIn: string | null; // "09:02" — reflects the latest correction, if any
   clockOut: string | null; // "17:30" or null if still open
   durationMinutes: number | null; // null if still open
   method: string; // NFC | MANUAL | ADMIN
   status: string; // AUTO | FLAGGED | REVIEW
   flagged: boolean;
+  hasCorrection: boolean;
+}
+
+export interface SessionCorrection {
+  id: number;
+  sessionId: number;
+  correctedByUserId: number;
+  originalClockIn: string | null; // "HH:mm:ss"
+  originalClockOut: string | null;
+  correctedClockIn: string | null;
+  correctedClockOut: string | null;
+  reason: string;
+  createdAt: string; // ISO instant
 }
 
 export interface MonthlySummaryRow {

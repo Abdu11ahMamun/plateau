@@ -1,9 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { getAttendance } from '../api/attendance';
-import type { AttendanceRow } from '../types/api.types';
+import toast from 'react-hot-toast';
+import { isAxiosError } from 'axios';
+import { getAttendance, correctSession, getCorrectionHistory } from '../api/attendance';
+import type { CorrectSessionInput } from '../api/attendance';
+import type { AttendanceRow, SessionCorrection } from '../types/api.types';
 import { getEmployeeColor } from '../lib/employeeColor';
 import {
   initials,
@@ -13,7 +16,10 @@ import {
   durationLabel,
   totalHoursLabel,
   todayLabel,
+  hm,
+  shortDateLabel,
 } from '../lib/format';
+import { ModalShell, ModalBody, ModalFooter, Field, btnGhost, btnPrimary, inputClass } from './EmployeesPage';
 import {
   CalendarIcon,
   ClockIcon,
@@ -25,6 +31,7 @@ import {
   ChevronUpDownIcon,
   ArrowUpIcon,
   XIcon,
+  EditIcon,
 } from '../components/icons';
 
 const PAGE_SIZE = 15;
@@ -54,6 +61,7 @@ export function MethodBadge({ method }: { method: string }) {
 
 export default function AttendancePage() {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [method, setMethod] = useState('ALL');
@@ -61,6 +69,8 @@ export default function AttendancePage() {
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [sort, setSort] = useState<Sort>({ key: 'date', dir: 'desc' });
   const [page, setPage] = useState(1);
+  const [correctingRow, setCorrectingRow] = useState<AttendanceRow | null>(null);
+  const [historyRow, setHistoryRow] = useState<AttendanceRow | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['attendance', month],
@@ -116,6 +126,11 @@ export default function AttendancePage() {
         ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
         : { key, dir: key === 'date' ? 'desc' : 'asc' }
     );
+  }
+
+  function handleCorrected() {
+    queryClient.invalidateQueries({ queryKey: ['attendance', month] });
+    toast.success('Session corrected');
   }
 
   return (
@@ -282,6 +297,7 @@ export default function AttendancePage() {
                 />
                 <Th className="hidden w-[104px] md:table-cell">Method</Th>
                 <Th className="hidden w-[120px] md:table-cell">Status</Th>
+                <Th className="w-[52px]" />
               </tr>
             </thead>
             <tbody>
@@ -314,7 +330,12 @@ export default function AttendancePage() {
                 </EmptyRow>
               ) : (
                 pageRows.map((row, i) => (
-                  <Row key={`${row.userId}-${row.date}-${i}`} row={row} />
+                  <Row
+                    key={`${row.userId}-${row.date}-${i}`}
+                    row={row}
+                    onCorrect={() => setCorrectingRow(row)}
+                    onViewHistory={() => setHistoryRow(row)}
+                  />
                 ))
               )}
             </tbody>
@@ -332,6 +353,18 @@ export default function AttendancePage() {
           />
         )}
       </div>
+
+      {correctingRow && (
+        <CorrectSessionModal
+          row={correctingRow}
+          onClose={() => setCorrectingRow(null)}
+          onCorrected={handleCorrected}
+        />
+      )}
+
+      {historyRow && (
+        <CorrectionHistoryModal row={historyRow} onClose={() => setHistoryRow(null)} />
+      )}
     </div>
   );
 }
@@ -541,10 +574,18 @@ function SortableTh({
   );
 }
 
-function Row({ row }: { row: AttendanceRow }) {
+function Row({
+  row,
+  onCorrect,
+  onViewHistory,
+}: {
+  row: AttendanceRow;
+  onCorrect: () => void;
+  onViewHistory: () => void;
+}) {
   return (
     <tr
-      className={`h-14 border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist ${
+      className={`group h-14 border-b border-plateau-border/60 transition-colors duration-100 last:border-0 hover:bg-mist ${
         row.flagged ? 'bg-amber-50' : ''
       }`}
     >
@@ -562,6 +603,28 @@ function Row({ row }: { row: AttendanceRow }) {
           <span className="truncate text-sm font-medium text-ink">
             {row.name}
           </span>
+          {row.hasCorrection &&
+            (row.sessionId != null ? (
+              <button
+                type="button"
+                onClick={onViewHistory}
+                title="View correction history"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 transition hover:bg-slate-200"
+              >
+                <EditIcon className="h-2.5 w-2.5" />
+                Corrected
+              </button>
+            ) : (
+              // sessionId isn't in this API response yet — show the fact
+              // without a click handler that would 401 the whole session.
+              <span
+                title="History unavailable until session IDs are exposed here"
+                className="inline-flex shrink-0 cursor-default items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500"
+              >
+                <EditIcon className="h-2.5 w-2.5" />
+                Corrected
+              </span>
+            ))}
         </div>
       </td>
       <td className="hidden px-5 font-mono text-sm text-ink md:table-cell">
@@ -587,6 +650,21 @@ function Row({ row }: { row: AttendanceRow }) {
       <td className="hidden px-5 md:table-cell">
         <StatusCell status={row.status} />
       </td>
+      <td className="px-3 text-right">
+        <button
+          type="button"
+          onClick={onCorrect}
+          disabled={row.sessionId == null}
+          title={
+            row.sessionId == null
+              ? 'Not available until session IDs are exposed here'
+              : 'Correct session'
+          }
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 opacity-0 transition hover:bg-mist hover:text-ink focus:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-slate-300"
+        >
+          <EditIcon className="h-4 w-4" />
+        </button>
+      </td>
     </tr>
   );
 }
@@ -611,6 +689,160 @@ function StatusCell({ status }: { status: string }) {
       className="inline-block h-2 w-2 rounded-full bg-sage"
       title="Verified"
     />
+  );
+}
+
+// ── Session correction ──────────────────────────────────────────────────
+
+const textareaClass =
+  'w-full rounded-lg border border-plateau-border bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-300 outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/25';
+
+function CorrectSessionModal({
+  row,
+  onClose,
+  onCorrected,
+}: {
+  row: AttendanceRow;
+  onClose: () => void;
+  onCorrected: () => void;
+}) {
+  const [clockIn, setClockIn] = useState(row.clockIn ?? '');
+  const [clockOut, setClockOut] = useState(row.clockOut ?? '');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (input: CorrectSessionInput) => correctSession(row.sessionId, input),
+    onSuccess: () => {
+      onCorrected();
+      onClose();
+    },
+    onError: (err) => {
+      const detail = isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined;
+      setError(detail || 'Something went wrong — try again.');
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!reason.trim()) {
+      setError('A reason is required.');
+      return;
+    }
+    mutation.mutate({
+      clockIn: clockIn || undefined,
+      clockOut: clockOut || undefined,
+      reason: reason.trim(),
+    });
+  }
+
+  return (
+    <ModalShell
+      title="Correct session"
+      description={`${row.name} · ${attendanceDateLabel(row.date)}`}
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Clock in">
+              <input
+                type="time"
+                value={clockIn}
+                onChange={(e) => setClockIn(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Clock out">
+              <input
+                type="time"
+                value={clockOut}
+                onChange={(e) => setClockOut(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <Field label="Reason" hint="required">
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Why is this being corrected?"
+              className={textareaClass}
+            />
+          </Field>
+
+          {error && (
+            <p className="rounded-lg border border-rouge/20 bg-rouge-100/60 px-3 py-2 text-sm font-medium text-rouge-700">
+              {error}
+            </p>
+          )}
+        </ModalBody>
+
+        <ModalFooter>
+          <button type="button" onClick={onClose} className={btnGhost}>
+            Cancel
+          </button>
+          <button type="submit" disabled={mutation.isPending} className={btnPrimary}>
+            {mutation.isPending ? 'Saving…' : 'Save correction'}
+          </button>
+        </ModalFooter>
+      </form>
+    </ModalShell>
+  );
+}
+
+function CorrectionHistoryModal({ row, onClose }: { row: AttendanceRow; onClose: () => void }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['correction-history', row.sessionId],
+    queryFn: () => getCorrectionHistory(row.sessionId),
+  });
+
+  const corrections = data ?? [];
+
+  return (
+    <ModalShell
+      title="Correction history"
+      description={`${row.name} · ${attendanceDateLabel(row.date)}`}
+      onClose={onClose}
+    >
+      <ModalBody>
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded bg-mist" />
+            ))}
+          </div>
+        ) : isError ? (
+          <p className="rounded-lg border border-rouge/20 bg-rouge-100/60 px-3 py-2 text-sm font-medium text-rouge-700">
+            Could not load correction history — try again.
+          </p>
+        ) : corrections.length === 0 ? (
+          <p className="py-4 text-center text-sm text-slate-400">No corrections recorded.</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-plateau-border/60">
+            {corrections.map((c: SessionCorrection) => (
+              <div key={c.id} className="py-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-ink">
+                    {hm(c.originalClockIn) || '—'}–{hm(c.originalClockOut) || '—'}
+                    <span className="mx-1.5 text-slate-300">→</span>
+                    {hm(c.correctedClockIn) || '—'}–{hm(c.correctedClockOut) || '—'}
+                  </span>
+                  <span className="shrink-0 text-xs text-slate-400">
+                    {shortDateLabel(c.createdAt)}
+                  </span>
+                </div>
+                <p className="mt-1 text-slate-500">{c.reason}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </ModalBody>
+    </ModalShell>
   );
 }
 
@@ -694,7 +926,7 @@ function pageNumbers(page: number, totalPages: number): (number | '…')[] {
 function EmptyRow({ children }: { children: React.ReactNode }) {
   return (
     <tr>
-      <td colSpan={7} className="p-0">
+      <td colSpan={8} className="p-0">
         {children}
       </td>
     </tr>
@@ -727,7 +959,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 8 }).map((_, i) => (
         <tr key={i} className="h-14 border-b border-plateau-border/60">
-          <td colSpan={7} className="px-5">
+          <td colSpan={8} className="px-5">
             <div className="h-5 animate-pulse rounded bg-mist" />
           </td>
         </tr>

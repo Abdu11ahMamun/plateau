@@ -7,6 +7,7 @@ import {
   ReportIcon,
   UsersIcon,
   BriefcaseIcon,
+  FlagIcon,
 } from './icons';
 
 const itemBase =
@@ -44,6 +45,11 @@ export default function MobileNav() {
       <NavLink to="/attendance" className={navClass}>
         <ClipboardIcon className="h-5 w-5" />
         Attendance
+      </NavLink>
+
+      <NavLink to="/flags" className={navClass}>
+        <FlagIcon className="h-5 w-5" />
+        Flags
       </NavLink>
 
       <NavLink to="/reports" className={navClass}>

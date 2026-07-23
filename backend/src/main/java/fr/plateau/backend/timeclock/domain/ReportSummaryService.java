@@ -25,15 +25,18 @@ public class ReportSummaryService {
     private final SessionRepository sessionRepository;
     private final EmployeeRepository employeeRepository;
     private final ContractService contractService;
+    private final CorrectionService correctionService;
 
     public ReportSummaryService(
             SessionRepository sessionRepository,
             EmployeeRepository employeeRepository,
-            ContractService contractService
+            ContractService contractService,
+            CorrectionService correctionService
     ) {
         this.sessionRepository = sessionRepository;
         this.employeeRepository = employeeRepository;
         this.contractService = contractService;
+        this.correctionService = correctionService;
     }
 
     @Transactional(readOnly = true)
@@ -60,8 +63,10 @@ public class ReportSummaryService {
     }
 
     private EmployeeMonthlySummary summarize(Employee employee, List<Session> sessions, Long tenantId, long daysInRange) {
+        // Corrected duration when a correction exists, since payroll must
+        // reflect the actual hours worked, not the original punch data.
         int totalMinutes = sessions.stream()
-                .map(Session::getMinutesTotal)
+                .map(session -> correctionService.resolveEffectiveMinutes(tenantId, session))
                 .filter(Objects::nonNull)
                 .mapToInt(Integer::intValue)
                 .sum();

@@ -427,3 +427,37 @@
 - Added: 60px width floor drops in-bar text for very short shifts
   (relies on tooltip instead), non-collapsible 3-item legend
   (judged collapse toggle = more UI than content it hides)
+
+
+  ## 2026-07-23 · M1 Session Corrections + M2 Anomaly Flag Queue — DONE
+- Corrections: fully immutable entity (no setters), read-time
+  resolution (Session/TimeEvent rows never touched)
+- Payroll integration verified with real arithmetic: 25−3+211=233,
+  matches exactly. Deleted correction → reverted cleanly, proving
+  read-time not write-time model
+- Flag Queue: resolved/unresolved filter, APPROVED/REJECTED tracking,
+  reuses CorrectionService so a corrected+flagged session shows
+  correct values in both places
+- Finding: PunchEvaluator never actually produces REVIEW status (only
+  AUTO/FLAGGED) — queue supports it via schema but it's currently dead
+  code path. Also: flagReason was computed but never persisted anywhere
+  in the existing schema — queue substitutes method+trustScore instead
+- Deliberate scope limit: REJECTED does not auto-exclude from payroll,
+  records judgment only — follow-up product decision, not built here
+
+  ## 2026-07-23 · Fix: sessionId on AttendanceRow + 401-instead-of-400 bug
+- AttendanceRow gained sessionId field — unblocks Corrections UI row actions
+- 🐛 Root cause (traced via logs, not guessed): malformed path variable
+  → Spring's MethodArgumentTypeMismatchException → correct 400 → 
+  container re-dispatches to /error → JwtAuthFilter's default
+  shouldNotFilterErrorDispatch()=true skips JWT re-check → STATELESS
+  policy means empty SecurityContext on that dispatch → /error wasn't
+  in permitAll → Spring Security's entry point fires, overwrites 400
+  with our custom 401 → frontend's global 401-handler force-logs-out
+  the user. This is exactly why a bad session ID click would have
+  silently booted an OWNER out of their own session.
+- Fix: added /error to permitAll in SecurityConfig. JwtAuthFilter itself
+  untouched — this is the standard minimal remedy for this well-known
+  Spring Security + custom-filter-chain pattern.
+- Verified no regression: 404 unchanged, no-token 401 unchanged, direct
+  /error hit exposes nothing sensitive

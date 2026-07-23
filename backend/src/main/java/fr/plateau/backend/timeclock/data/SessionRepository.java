@@ -1,12 +1,15 @@
 package fr.plateau.backend.timeclock.data;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import fr.plateau.backend.timeclock.domain.SessionStatus;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
 
@@ -36,4 +39,6 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
             @Param("tenantId") Long tenantId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
+
+    List<Session> findByTenantIdAndStatusIn(Long tenantId, Collection<SessionStatus> statuses);
 }
